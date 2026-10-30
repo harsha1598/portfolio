@@ -25,17 +25,13 @@ export default function Footer({ onOpenAdmin }) {
             </div>
           </div>
 
-          {/* Center / Right: Actions & Hidden Admin Lock */}
+          {/* Right: Actions */}
           <div className="flex items-center gap-4">
-            <span className="text-[11px] text-slate-600 hidden md:inline">
-              Press <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">Shift</kbd> + <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">A</kbd> for Admin
-            </span>
-
-            {/* Hidden / Discreet Admin Lock Trigger */}
+            {/* Subtle discreet shield button with no label or tooltip */}
             <button
               onClick={onOpenAdmin}
-              title="Admin Panel (Ctrl+Shift+A)"
-              className="p-2 text-slate-600 hover:text-emerald-400 hover:bg-slate-900 rounded-lg transition-colors border border-transparent hover:border-slate-800 cursor-pointer"
+              className="p-1.5 text-slate-700 hover:text-slate-500 rounded transition-colors cursor-pointer"
+              aria-label="Security"
             >
               <Shield className="w-3.5 h-3.5" />
             </button>

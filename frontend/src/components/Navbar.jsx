@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Terminal, Shield, Menu, X, FileText, Wifi, CloudOff } from 'lucide-react';
+import { Terminal, Menu, X, FileText, Wifi, CloudOff } from 'lucide-react';
 
 export default function Navbar({ onOpenAdmin, isApiOnline }) {
   const [scrolled, setScrolled] = useState(false);
@@ -71,7 +71,7 @@ export default function Navbar({ onOpenAdmin, isApiOnline }) {
               }`}
               title={
                 isApiOnline
-                  ? 'Connected to local FastAPI + SQLite backend'
+                  ? 'Connected to FastAPI backend'
                   : 'Operating in client-side / GitHub Pages mode'
               }
             >
@@ -83,7 +83,7 @@ export default function Navbar({ onOpenAdmin, isApiOnline }) {
               ) : (
                 <>
                   <CloudOff className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Pages Mode</span>
+                  <span>Static Mode</span>
                 </>
               )}
             </div>
@@ -96,26 +96,10 @@ export default function Navbar({ onOpenAdmin, isApiOnline }) {
               <FileText className="w-4 h-4" />
               <span>Hire Me</span>
             </a>
-
-            {/* Hidden / Discreet Admin trigger */}
-            <button
-              onClick={onOpenAdmin}
-              title="Admin Panel (Ctrl+Shift+A)"
-              className="p-2 text-slate-500 hover:text-emerald-400 hover:bg-slate-800/60 rounded-lg transition-colors border border-transparent hover:border-slate-800"
-            >
-              <Shield className="w-4 h-4" />
-            </button>
           </div>
 
           {/* Mobile Menu Toggle */}
           <div className="flex md:hidden items-center gap-2">
-            <button
-              onClick={onOpenAdmin}
-              title="Admin Panel"
-              className="p-2 text-slate-400 hover:text-emerald-400"
-            >
-              <Shield className="w-4 h-4" />
-            </button>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 text-slate-300 hover:text-white rounded-lg hover:bg-slate-800"
@@ -140,7 +124,7 @@ export default function Navbar({ onOpenAdmin, isApiOnline }) {
             ))}
             <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
               <span className="text-xs text-slate-400 font-mono">
-                {isApiOnline ? '🟢 API Online' : '⚡ Static / Pages Mode'}
+                {isApiOnline ? '🟢 API Online' : '⚡ Static Mode'}
               </span>
               <a
                 href="#contact"

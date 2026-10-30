@@ -40,7 +40,7 @@ export default function AdminModal({
 }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState('profile');
-  const [username, setUsername] = useState('admin');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [saveStatus, setSaveStatus] = useState(null);
@@ -214,6 +214,7 @@ export default function AdminModal({
                     <input
                       type="text"
                       required
+                      placeholder="Username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm text-white focus:border-emerald-500 outline-none"
@@ -248,13 +249,7 @@ export default function AdminModal({
                 </div>
               </form>
 
-              <div className="mt-6 p-3 rounded-xl bg-slate-950 border border-slate-800/80 text-[11px] text-slate-400 font-mono">
-                💡 <span className="text-slate-300">Default Credentials:</span>
-                <br />
-                User: <span className="text-emerald-400 font-bold">admin</span>
-                <br />
-                Password: <span className="text-emerald-400 font-bold">harsha123</span>
-              </div>
+              
             </div>
           </div>
         ) : (
