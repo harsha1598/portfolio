@@ -9,10 +9,12 @@ import {
   Download,
   ExternalLink,
   Award,
+  Bot,
+  Sparkles,
 } from 'lucide-react';
 import { GithubIcon, LinkedinIcon } from './Icons';
 
-export default function Hero({ profile }) {
+export default function Hero({ profile, onOpenChat }) {
   if (!profile) return null;
 
   return (
@@ -94,6 +96,18 @@ export default function Hero({ profile }) {
               <span>Explore Projects</span>
               <ChevronRight className="w-4 h-4" />
             </a>
+
+            <button
+              onClick={onOpenChat}
+              className="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl font-semibold text-emerald-300 bg-slate-900/90 hover:bg-slate-800 border-2 border-emerald-500/40 hover:border-emerald-400 transition-all shadow-lg shadow-emerald-500/10 hover:scale-105 cursor-pointer group"
+            >
+              <Bot className="w-5 h-5 text-emerald-400 group-hover:rotate-12 transition-transform" />
+              <span>Ask Harsha's AI</span>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+            </button>
 
             <a
               href="#contact"

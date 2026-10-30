@@ -17,6 +17,7 @@ export default function App() {
   const [portfolioData, setPortfolioData] = useState(defaultPortfolioData);
   const [isApiOnline, setIsApiOnline] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -61,10 +62,11 @@ export default function App() {
       <Navbar
         onOpenAdmin={() => setIsAdminOpen(true)}
         isApiOnline={isApiOnline}
+        onOpenChat={() => setIsChatOpen(true)}
       />
 
       <main>
-        <Hero profile={portfolioData.profile} />
+        <Hero profile={portfolioData.profile} onOpenChat={() => setIsChatOpen(true)} />
         <About profile={portfolioData.profile} />
         <Experience experiences={portfolioData.experiences} />
         <Skills skills={portfolioData.skills} />
@@ -80,7 +82,7 @@ export default function App() {
       <Footer onOpenAdmin={() => setIsAdminOpen(true)} />
 
       {/* Floating AI Agent Chat Widget */}
-      <ChatWidget />
+      <ChatWidget isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
 
       {/* Hidden Admin Modal (No routed URL directly in the frontend) */}
       <AdminModal

@@ -2,8 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Bot, X, Send, Sparkles, Loader2, MessageSquare, ArrowRight } from 'lucide-react';
 import { sendChatMessage } from '../services/api';
 
-export default function ChatWidget() {
-  const [isOpen, setIsOpen] = useState(false);
+export default function ChatWidget({ isOpen: controlledIsOpen, setIsOpen: controlledSetIsOpen }) {
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
+  const setIsOpen = controlledSetIsOpen || setInternalIsOpen;
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
@@ -56,16 +58,20 @@ export default function ChatWidget() {
   ];
 
   return (
-    <div className="fixed bottom-6 right-6 z-40">
+    <div className="fixed bottom-6 right-6 z-50">
       {/* Floating Toggle Button */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-slate-900 border border-emerald-500/40 text-white shadow-xl shadow-emerald-500/10 hover:border-emerald-400 hover:scale-105 transition-all cursor-pointer group"
+          aria-label="Open Harsha's AI Agent Chat"
+          className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-slate-900/95 border-2 border-emerald-500/60 hover:border-emerald-400 text-white shadow-2xl shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer group"
         >
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+          </span>
           <Bot className="w-5 h-5 text-emerald-400 group-hover:rotate-12 transition-transform" />
-          <span className="text-xs font-mono font-semibold text-slate-200">
+          <span className="text-xs font-mono font-bold text-slate-100 tracking-wide">
             Ask Harsha's AI
           </span>
         </button>

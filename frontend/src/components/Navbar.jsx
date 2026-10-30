@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Terminal, Menu, X, FileText, Wifi, CloudOff } from 'lucide-react';
+import { Terminal, Menu, X, FileText, Wifi, CloudOff, Bot, Sparkles } from 'lucide-react';
 
-export default function Navbar({ onOpenAdmin, isApiOnline }) {
+export default function Navbar({ onOpenAdmin, isApiOnline, onOpenChat }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -88,6 +88,16 @@ export default function Navbar({ onOpenAdmin, isApiOnline }) {
               )}
             </div>
 
+            {/* AI Agent Button */}
+            <button
+              onClick={onOpenChat}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:border-emerald-400 transition-all cursor-pointer shadow-sm hover:shadow-emerald-500/10"
+              title="Chat with Harsha's AI Agent"
+            >
+              <Bot className="w-3.5 h-3.5 animate-pulse" />
+              <span>Ask AI Agent</span>
+            </button>
+
             {/* Resume Button */}
             <a
               href="#contact"
@@ -122,14 +132,21 @@ export default function Navbar({ onOpenAdmin, isApiOnline }) {
                 {link.name}
               </a>
             ))}
-            <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
-              <span className="text-xs text-slate-400 font-mono">
-                {isApiOnline ? '🟢 API Online' : '⚡ Static Mode'}
-              </span>
+            <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-2">
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenChat?.();
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg cursor-pointer"
+              >
+                <Bot className="w-3.5 h-3.5" />
+                <span>Ask AI Agent</span>
+              </button>
               <a
                 href="#contact"
                 onClick={() => setMobileMenuOpen(false)}
-                className="px-3 py-1 text-xs font-semibold text-slate-950 bg-emerald-400 rounded-md"
+                className="px-3.5 py-1.5 text-xs font-semibold text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-lg"
               >
                 Hire Me
               </a>
