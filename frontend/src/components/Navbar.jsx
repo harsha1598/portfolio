@@ -1,0 +1,158 @@
+import React, { useState, useEffect } from 'react';
+import { Terminal, Shield, Menu, X, FileText, Wifi, CloudOff } from 'lucide-react';
+
+export default function Navbar({ onOpenAdmin, isApiOnline }) {
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const navLinks = [
+    { name: 'About', href: '#about' },
+    { name: 'Experience', href: '#experience' },
+    { name: 'Skills', href: '#skills' },
+    { name: 'Projects', href: '#projects' },
+    { name: 'Credentials', href: '#credentials' },
+    { name: 'Contact', href: '#contact' },
+  ];
+
+  return (
+    <nav
+      className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${
+        scrolled
+          ? 'bg-[#07090e]/90 backdrop-blur-md border-b border-slate-800/80 shadow-lg shadow-black/40 py-3.5'
+          : 'bg-transparent py-5'
+      }`}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between">
+          {/* Brand Logo */}
+          <a href="#" className="flex items-center gap-2.5 group">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500/20 to-cyan-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 group-hover:border-emerald-400 transition-colors">
+              <Terminal className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="font-mono font-bold text-lg text-slate-100 tracking-tight group-hover:text-emerald-400 transition-colors">
+                Harsha<span className="text-emerald-400">.</span>Reddi
+              </span>
+              <span className="hidden sm:block text-[11px] text-slate-400 font-mono tracking-wider">
+                DATA & FULL STACK ENG
+              </span>
+            </div>
+          </a>
+
+          {/* Desktop Nav Links */}
+          <div className="hidden md:flex items-center gap-1 lg:gap-2">
+            {navLinks.map((link) => (
+              <a
+                key={link.name}
+                href={link.href}
+                className="px-3.5 py-1.5 text-sm font-medium text-slate-300 hover:text-emerald-400 rounded-lg hover:bg-slate-800/50 transition-all duration-150"
+              >
+                {link.name}
+              </a>
+            ))}
+          </div>
+
+          {/* Right Action Buttons */}
+          <div className="hidden md:flex items-center gap-3">
+            {/* Status Indicator */}
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono border ${
+                isApiOnline
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                  : 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30'
+              }`}
+              title={
+                isApiOnline
+                  ? 'Connected to local FastAPI + SQLite backend'
+                  : 'Operating in client-side / GitHub Pages mode'
+              }
+            >
+              {isApiOnline ? (
+                <>
+                  <Wifi className="w-3.5 h-3.5 animate-pulse text-emerald-400" />
+                  <span>FastAPI Live</span>
+                </>
+              ) : (
+                <>
+                  <CloudOff className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Pages Mode</span>
+                </>
+              )}
+            </div>
+
+            {/* Resume Button */}
+            <a
+              href="#contact"
+              className="flex items-center gap-2 px-4 py-1.5 text-sm font-semibold text-slate-950 bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 rounded-lg shadow-sm hover:shadow-emerald-500/20 transition-all duration-200"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Hire Me</span>
+            </a>
+
+            {/* Hidden / Discreet Admin trigger */}
+            <button
+              onClick={onOpenAdmin}
+              title="Admin Panel (Ctrl+Shift+A)"
+              className="p-2 text-slate-500 hover:text-emerald-400 hover:bg-slate-800/60 rounded-lg transition-colors border border-transparent hover:border-slate-800"
+            >
+              <Shield className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Mobile Menu Toggle */}
+          <div className="flex md:hidden items-center gap-2">
+            <button
+              onClick={onOpenAdmin}
+              title="Admin Panel"
+              className="p-2 text-slate-400 hover:text-emerald-400"
+            >
+              <Shield className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2 text-slate-300 hover:text-white rounded-lg hover:bg-slate-800"
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Dropdown */}
+        {mobileMenuOpen && (
+          <div className="md:hidden mt-3 p-4 bg-slate-900/95 border border-slate-800 rounded-2xl shadow-xl flex flex-col gap-2">
+            {navLinks.map((link) => (
+              <a
+                key={link.name}
+                href={link.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2 text-sm text-slate-200 hover:text-emerald-400 hover:bg-slate-800/60 rounded-lg"
+              >
+                {link.name}
+              </a>
+            ))}
+            <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+              <span className="text-xs text-slate-400 font-mono">
+                {isApiOnline ? '🟢 API Online' : '⚡ Static / Pages Mode'}
+              </span>
+              <a
+                href="#contact"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-1 text-xs font-semibold text-slate-950 bg-emerald-400 rounded-md"
+              >
+                Hire Me
+              </a>
+            </div>
+          </div>
+        )}
+      </div>
+    </nav>
+  );
+}
