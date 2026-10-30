@@ -195,3 +195,19 @@ export const resetToDefaults = async () => {
   localStorage.removeItem(LOCAL_STORAGE_KEY);
   return defaultPortfolioData;
 };
+// AI Agent Chat
+export const sendChatMessage = async (message) => {
+  try {
+    const res = await smartFetch('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message }),
+    });
+    return await res.json();
+  } catch (err) {
+    return {
+      reply:
+        "Harsha is a Software Engineer 2 at Deloitte USI with 6+ years of experience across Azure Synapse, PySpark, FastAPI, and React JS. Please configure the GEMINI_API_KEY in your Vercel Project Settings to unlock live AI responses!",
+    };
+  }
+};

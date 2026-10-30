@@ -9,6 +9,7 @@ import Credentials from './components/Credentials';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
 import AdminModal from './components/AdminModal';
+import ChatWidget from './components/ChatWidget';
 import { fetchPortfolioData, checkApiHealth } from './services/api';
 import { defaultPortfolioData } from './data/defaultData';
 
@@ -77,6 +78,9 @@ export default function App() {
       </main>
 
       <Footer onOpenAdmin={() => setIsAdminOpen(true)} />
+
+      {/* Floating AI Agent Chat Widget */}
+      <ChatWidget />
 
       {/* Hidden Admin Modal (No routed URL directly in the frontend) */}
       <AdminModal

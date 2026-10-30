@@ -519,3 +519,73 @@ def reset_to_defaults(
 ):
     seed_database(db, force=True)
     return {"status": "success", "message": "Database successfully reset to resume defaults"}
+
+
+# -----------------------------
+# AI Agent Endpoint
+# -----------------------------
+
+import os
+import httpx
+from pydantic import BaseModel
+
+class ChatRequest(BaseModel):
+    message: str
+
+HARSHA_AGENT_PROMPT = """
+You are the personal AI Assistant and representative for Harsha Vardhan Reddi on his portfolio website.
+Your mission is to represent Harsha professionally, accurately, and engagingly to engineering recruiters, hiring managers, and clients.
+
+Core Profile of Harsha:
+- Software Engineer 2 at Deloitte USI (Hyderabad)
+- 6+ years experience in Data Engineering, Microservices, and Full Stack Development.
+- Previous Roles: PwC AC India (Data Engineer - Senior Associate), Tata Consultancy Services (Data Engineer & Full Stack Developer), TCS BFSI Garage (Data Science Intern).
+- Core Stacks: Azure Synapse, PySpark, Azure Cloud, Databricks, Azure Pipelines, SQL, MySQL, Python, FastAPI, Django REST, Spring Boot, React JS, Angular, Docker, Kubernetes.
+- Certifications: Azure Fundamentals (AZ-900), Azure Data Fundamentals (DP-900).
+- Education: B.Tech in CSE from GMRIT (Grade: 8.9 CGPA).
+- Milestones: PwC Annual Awards 2024, 8th Rank in TCS Codeathon, Smart India Hackathon Finalist.
+- Contact: harshareddy1598@gmail.com, +91 6303661465, Hyderabad, India.
+- LinkedIn: https://www.linkedin.com/in/harsha-vardhan-reddi
+- GitHub: https://github.com/harsha1598
+
+Guidelines:
+- Speak in the third person about Harsha ("Harsha has extensive experience with...", "At PwC, Harsha built...").
+- Keep replies concise, articulate, and technical (2-4 sentences or short bullet points).
+- If recruiters ask about hiring, confirm he is open to senior data engineering and full-stack opportunities in Hyderabad or Remote, and invite them to leave a message or email him.
+- Never make up false experiences or disclose confidential client information.
+"""
+
+@app.post("/chat")
+@app.post("/api/chat")
+async def chat_with_harsha_agent(req: ChatRequest):
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return {
+            "reply": "Hello! I am Harsha's AI Agent. To activate live responses, add the GEMINI_API_KEY environment variable in your Vercel Project Settings."
+        }
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+    payload = {
+        "system_instruction": {
+            "parts": [{"text": HARSHA_AGENT_PROMPT}]
+        },
+        "contents": [
+            {"role": "user", "parts": [{"text": req.message}]}
+        ],
+        "generationConfig": {
+            "temperature": 0.4,
+            "maxOutputTokens": 600
+        }
+    }
+
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            resp = await client.post(url, json=payload)
+            if resp.status_code == 200:
+                data = resp.json()
+                text = data["candidates"][0]["content"]["parts"][0]["text"]
+                return {"reply": text}
+            else:
+                return {"reply": f"Gemini API returned status {resp.status_code}. Please verify your API key."}
+        except Exception as e:
+            return {"reply": f"AI service temporarily unavailable: {str(e)}"}
