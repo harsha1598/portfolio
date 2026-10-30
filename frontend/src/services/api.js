@@ -1,6 +1,6 @@
 import { defaultPortfolioData } from '../data/defaultData';
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 const LOCAL_STORAGE_KEY = 'harsha_portfolio_data';
 const LOCAL_MESSAGES_KEY = 'harsha_portfolio_messages';
 const AUTH_TOKEN_KEY = 'harsha_portfolio_token';
@@ -25,16 +25,37 @@ export const saveLocalData = (data) => {
   }
 };
 
+// Smart fetcher that handles both /api/endpoint and /endpoint automatically
+async function smartFetch(subpath, options = {}) {
+  const cleanPath = subpath.startsWith('/') ? subpath : `/${subpath}`;
+  
+  // Try with /api prefix first
+  try {
+    const res = await fetch(`${API_BASE}/api${cleanPath}`, options);
+    if (res.ok) return res;
+  } catch {
+    // Continue to fallback
+  }
+
+  // Try direct route (e.g. on Vercel without /api prefix)
+  try {
+    const res = await fetch(`${API_BASE}${cleanPath}`, options);
+    if (res.ok) return res;
+  } catch {
+    // Continue
+  }
+
+  throw new Error(`Failed to reach ${subpath}`);
+}
+
 // Check if backend API is online
 export const checkApiHealth = async () => {
   try {
-    const res = await fetch(`${API_BASE}/api/health`, { method: 'GET' });
-    if (res.ok) {
-      const data = await res.json();
-      return { online: true, data };
-    }
+    const res = await smartFetch('/health', { method: 'GET' });
+    const data = await res.json();
+    return { online: true, data };
   } catch {
-    // API is offline or running static on GitHub Pages
+    // API is offline or running static on GitHub Pages without live connection
   }
   return { online: false };
 };
@@ -42,12 +63,10 @@ export const checkApiHealth = async () => {
 // Fetch Portfolio Data (Dual-Mode)
 export const fetchPortfolioData = async () => {
   try {
-    const res = await fetch(`${API_BASE}/api/portfolio`);
-    if (res.ok) {
-      const data = await res.json();
-      saveLocalData(data); // Sync local copy
-      return { data, source: 'api' };
-    }
+    const res = await smartFetch('/portfolio');
+    const data = await res.json();
+    saveLocalData(data); // Sync local copy
+    return { data, source: 'api' };
   } catch {
     // Fall back to local data
   }
@@ -57,14 +76,12 @@ export const fetchPortfolioData = async () => {
 // Submit Contact Message (Dual-Mode)
 export const sendContactMessage = async (messageData) => {
   try {
-    const res = await fetch(`${API_BASE}/api/contact`, {
+    const res = await smartFetch('/contact', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(messageData),
     });
-    if (res.ok) {
-      return await res.json();
-    }
+    return await res.json();
   } catch {
     // Fall back to local store
   }
@@ -82,7 +99,7 @@ export const sendContactMessage = async (messageData) => {
     localStorage.setItem(LOCAL_MESSAGES_KEY, JSON.stringify(existing));
     return {
       status: 'success',
-      message: `Thank you ${messageData.name}! Your message has been received (stored locally).`,
+      message: `Thank you ${messageData.name}! Your message has been received (saved locally).`,
     };
   } catch (err) {
     throw new Error('Failed to save message: ' + err.message);
@@ -92,18 +109,16 @@ export const sendContactMessage = async (messageData) => {
 // Admin Authentication
 export const loginAdmin = async (username, password) => {
   try {
-    const res = await fetch(`${API_BASE}/api/auth/login`, {
+    const res = await smartFetch('/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     });
-    if (res.ok) {
-      const data = await res.json();
-      localStorage.setItem(AUTH_TOKEN_KEY, data.access_token);
-      return { success: true, token: data.access_token, source: 'api' };
-    }
+    const data = await res.json();
+    localStorage.setItem(AUTH_TOKEN_KEY, data.access_token);
+    return { success: true, token: data.access_token, source: 'api' };
   } catch {
-    // Offline / Static fallback check
+    // Standalone fallback check
   }
 
   // Standalone mode credentials fallback
@@ -122,15 +137,15 @@ export const logoutAdmin = () => localStorage.removeItem(AUTH_TOKEN_KEY);
 // Fetch Messages for Admin
 export const fetchAdminMessages = async () => {
   const token = getAuthToken();
-  try {
-    const res = await fetch(`${API_BASE}/api/admin/messages`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.ok) {
+  if (token) {
+    try {
+      const res = await smartFetch('/admin/messages', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       return await res.json();
+    } catch {
+      // Fall back
     }
-  } catch {
-    // Fall back to local messages
   }
   try {
     return JSON.parse(localStorage.getItem(LOCAL_MESSAGES_KEY) || '[]');
@@ -141,16 +156,14 @@ export const fetchAdminMessages = async () => {
 
 // Save Whole Portfolio Data (Dual-Mode update)
 export const saveAllPortfolioData = async (fullData) => {
-  // Save locally first
   saveLocalData(fullData);
 
   const token = getAuthToken();
   if (!token) return { success: true, source: 'local' };
 
   try {
-    // Sync profile to backend if possible
     if (fullData.profile) {
-      await fetch(`${API_BASE}/api/admin/profile`, {
+      await smartFetch('/admin/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -169,13 +182,15 @@ export const saveAllPortfolioData = async (fullData) => {
 // Reset to Defaults
 export const resetToDefaults = async () => {
   const token = getAuthToken();
-  try {
-    await fetch(`${API_BASE}/api/admin/reset-defaults`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-  } catch {
-    // Ignore if offline
+  if (token) {
+    try {
+      await smartFetch('/admin/reset-defaults', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {
+      // Ignore if offline
+    }
   }
   localStorage.removeItem(LOCAL_STORAGE_KEY);
   return defaultPortfolioData;

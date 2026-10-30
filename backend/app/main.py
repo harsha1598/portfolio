@@ -97,6 +97,7 @@ def root():
 
 
 @app.get("/health")
+@app.get("/health")
 @app.get("/api/health")
 def health_check():
     return {
@@ -106,6 +107,7 @@ def health_check():
     }
 
 
+@app.get("/portfolio", response_model=PortfolioFullData)
 @app.get("/portfolio", response_model=PortfolioFullData)
 @app.get("/api/portfolio", response_model=PortfolioFullData)
 def get_portfolio_data(db: Session = Depends(get_db)):
@@ -128,6 +130,7 @@ def get_portfolio_data(db: Session = Depends(get_db)):
     )
 
 
+@app.post("/contact")
 @app.post("/api/contact")
 def submit_contact_message(msg: ContactMessageCreate, db: Session = Depends(get_db)):
     db_msg = ContactMessage(
@@ -150,6 +153,7 @@ def submit_contact_message(msg: ContactMessageCreate, db: Session = Depends(get_
 # Authentication Endpoints
 # -----------------------------
 
+@app.post("/auth/login", response_model=Token)
 @app.post("/api/auth/login", response_model=Token)
 def login(form_data: AdminLogin, db: Session = Depends(get_db)):
     admin = db.query(AdminUser).filter(AdminUser.username == form_data.username).first()
@@ -162,11 +166,13 @@ def login(form_data: AdminLogin, db: Session = Depends(get_db)):
     return Token(access_token=token, token_type="bearer", username=admin.username)
 
 
+@app.get("/auth/me")
 @app.get("/api/auth/me")
 def get_current_admin_info(admin: AdminUser = Depends(get_current_admin)):
     return {"username": admin.username, "authenticated": True}
 
 
+@app.put("/auth/password")
 @app.put("/api/auth/password")
 def change_admin_password(
     data: PasswordChange,
@@ -186,6 +192,7 @@ def change_admin_password(
 # Admin Protected Endpoints
 # -----------------------------
 
+@app.put("/admin/profile", response_model=ProfileOut)
 @app.put("/api/admin/profile", response_model=ProfileOut)
 def update_profile(
     data: ProfileUpdate,
@@ -205,6 +212,7 @@ def update_profile(
 
 
 # Experiences
+@app.post("/admin/experiences", response_model=ExperienceOut)
 @app.post("/api/admin/experiences", response_model=ExperienceOut)
 def create_experience(
     data: ExperienceCreate,
@@ -218,6 +226,7 @@ def create_experience(
     return exp
 
 
+@app.put("/admin/experiences/{exp_id}", response_model=ExperienceOut)
 @app.put("/api/admin/experiences/{exp_id}", response_model=ExperienceOut)
 def update_experience(
     exp_id: int,
@@ -235,6 +244,7 @@ def update_experience(
     return exp
 
 
+@app.delete("/admin/experiences/{exp_id}")
 @app.delete("/api/admin/experiences/{exp_id}")
 def delete_experience(
     exp_id: int,
@@ -250,6 +260,7 @@ def delete_experience(
 
 
 # Projects
+@app.post("/admin/projects", response_model=ProjectOut)
 @app.post("/api/admin/projects", response_model=ProjectOut)
 def create_project(
     data: ProjectCreate,
@@ -263,6 +274,7 @@ def create_project(
     return proj
 
 
+@app.put("/admin/projects/{proj_id}", response_model=ProjectOut)
 @app.put("/api/admin/projects/{proj_id}", response_model=ProjectOut)
 def update_project(
     proj_id: int,
@@ -280,6 +292,7 @@ def update_project(
     return proj
 
 
+@app.delete("/admin/projects/{proj_id}")
 @app.delete("/api/admin/projects/{proj_id}")
 def delete_project(
     proj_id: int,
@@ -295,6 +308,7 @@ def delete_project(
 
 
 # Skills
+@app.post("/admin/skills", response_model=SkillOut)
 @app.post("/api/admin/skills", response_model=SkillOut)
 def create_skill(
     data: SkillCreate,
@@ -308,6 +322,7 @@ def create_skill(
     return skill
 
 
+@app.put("/admin/skills/{skill_id}", response_model=SkillOut)
 @app.put("/api/admin/skills/{skill_id}", response_model=SkillOut)
 def update_skill(
     skill_id: int,
@@ -325,6 +340,7 @@ def update_skill(
     return skill
 
 
+@app.delete("/admin/skills/{skill_id}")
 @app.delete("/api/admin/skills/{skill_id}")
 def delete_skill(
     skill_id: int,
@@ -340,6 +356,7 @@ def delete_skill(
 
 
 # Education
+@app.put("/admin/education/{edu_id}", response_model=EducationOut)
 @app.put("/api/admin/education/{edu_id}", response_model=EducationOut)
 def update_education(
     edu_id: int,
@@ -358,6 +375,7 @@ def update_education(
 
 
 # Awards
+@app.post("/admin/awards", response_model=AwardOut)
 @app.post("/api/admin/awards", response_model=AwardOut)
 def create_award(
     data: AwardCreate,
@@ -371,6 +389,7 @@ def create_award(
     return award
 
 
+@app.put("/admin/awards/{award_id}", response_model=AwardOut)
 @app.put("/api/admin/awards/{award_id}", response_model=AwardOut)
 def update_award(
     award_id: int,
@@ -388,6 +407,7 @@ def update_award(
     return award
 
 
+@app.delete("/admin/awards/{award_id}")
 @app.delete("/api/admin/awards/{award_id}")
 def delete_award(
     award_id: int,
@@ -403,6 +423,7 @@ def delete_award(
 
 
 # Certifications
+@app.post("/admin/certifications", response_model=CertificationOut)
 @app.post("/api/admin/certifications", response_model=CertificationOut)
 def create_certification(
     data: CertificationCreate,
@@ -416,6 +437,7 @@ def create_certification(
     return cert
 
 
+@app.put("/admin/certifications/{cert_id}", response_model=CertificationOut)
 @app.put("/api/admin/certifications/{cert_id}", response_model=CertificationOut)
 def update_certification(
     cert_id: int,
@@ -433,6 +455,7 @@ def update_certification(
     return cert
 
 
+@app.delete("/admin/certifications/{cert_id}")
 @app.delete("/api/admin/certifications/{cert_id}")
 def delete_certification(
     cert_id: int,
@@ -448,6 +471,7 @@ def delete_certification(
 
 
 # Contact Messages
+@app.get("/admin/messages", response_model=List[ContactMessageOut])
 @app.get("/api/admin/messages", response_model=List[ContactMessageOut])
 def get_contact_messages(
     admin: AdminUser = Depends(get_current_admin),
@@ -456,6 +480,7 @@ def get_contact_messages(
     return db.query(ContactMessage).order_by(ContactMessage.created_at.desc()).all()
 
 
+@app.put("/admin/messages/{msg_id}/read")
 @app.put("/api/admin/messages/{msg_id}/read")
 def mark_message_read(
     msg_id: int,
@@ -470,6 +495,7 @@ def mark_message_read(
     return {"status": "success", "message": "Marked as read"}
 
 
+@app.delete("/admin/messages/{msg_id}")
 @app.delete("/api/admin/messages/{msg_id}")
 def delete_contact_message(
     msg_id: int,
@@ -485,6 +511,7 @@ def delete_contact_message(
 
 
 # Reset to Resume Defaults
+@app.post("/admin/reset-defaults")
 @app.post("/api/admin/reset-defaults")
 def reset_to_defaults(
     admin: AdminUser = Depends(get_current_admin),
