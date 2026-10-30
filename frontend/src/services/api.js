@@ -1,6 +1,9 @@
 import { defaultPortfolioData } from '../data/defaultData';
 
 const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://mmeddnoitjmoegurtafe.supabase.co').replace(/\/+$/, '');
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_NukIXDw7ZwWtuEqgFZK2hw_XKkmj_Ae';
+
 const LOCAL_STORAGE_KEY = 'harsha_portfolio_data';
 const LOCAL_MESSAGES_KEY = 'harsha_portfolio_messages';
 const AUTH_TOKEN_KEY = 'harsha_portfolio_token';
@@ -24,6 +27,55 @@ export const saveLocalData = (data) => {
     console.error('Failed to save to localStorage:', e);
   }
 };
+
+// Direct Supabase REST fetcher (High performance, live across all devices)
+export async function fetchFromSupabase() {
+  const headers = {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+  };
+
+  try {
+    const [profRes, expRes, skillRes, eduRes, projRes, awardRes, certRes, postRes] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/profiles?select=*`, { headers }),
+      fetch(`${SUPABASE_URL}/rest/v1/experiences?select=*&order=display_order.asc`, { headers }),
+      fetch(`${SUPABASE_URL}/rest/v1/skills?select=*&order=display_order.asc`, { headers }),
+      fetch(`${SUPABASE_URL}/rest/v1/educations?select=*`, { headers }),
+      fetch(`${SUPABASE_URL}/rest/v1/projects?select=*&order=display_order.asc`, { headers }),
+      fetch(`${SUPABASE_URL}/rest/v1/awards?select=*&order=display_order.asc`, { headers }),
+      fetch(`${SUPABASE_URL}/rest/v1/certifications?select=*&order=display_order.asc`, { headers }),
+      fetch(`${SUPABASE_URL}/rest/v1/blog_posts?select=*&is_published=eq.true&order=created_at.desc`, { headers }),
+    ]);
+
+    if (profRes.ok) {
+      const profiles = await profRes.json();
+      if (profiles && profiles.length > 0) {
+        const experiences = expRes.ok ? await expRes.json() : [];
+        const skills = skillRes.ok ? await skillRes.json() : [];
+        const education = eduRes.ok ? await eduRes.json() : [];
+        const projects = projRes.ok ? await projRes.json() : [];
+        const awards = awardRes.ok ? await awardRes.json() : [];
+        const certifications = certRes.ok ? await certRes.json() : [];
+        const posts = postRes.ok ? await postRes.json() : [];
+
+        return {
+          profile: profiles[0],
+          experiences,
+          skills,
+          education,
+          projects,
+          awards,
+          certifications,
+          posts,
+          is_custom: true,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('Direct Supabase fetch error:', err);
+  }
+  return null;
+}
 
 // Smart fetcher that handles both /api/endpoint and /endpoint automatically
 async function smartFetch(subpath, options = {}) {
@@ -60,8 +112,20 @@ export const checkApiHealth = async () => {
   return { online: false };
 };
 
-// Fetch Portfolio Data (Dual-Mode with intelligent persistence)
+// Fetch Portfolio Data (Multi-tier: Supabase Cloud DB -> FastAPI Vercel -> Local Storage)
 export const fetchPortfolioData = async () => {
+  // 1. First priority: Direct Supabase Cloud (Live, persistent on all devices, 0 cold starts)
+  try {
+    const sbData = await fetchFromSupabase();
+    if (sbData && sbData.profile && sbData.profile.name && sbData.profile.name !== 'Developer Portfolio') {
+      saveLocalData(sbData);
+      return { data: sbData, source: 'supabase' };
+    }
+  } catch (e) {
+    // Continue to next tier
+  }
+
+  // 2. Second priority: FastAPI Backend on Vercel
   const local = getLocalData();
   const isLocalCustom = Boolean(
     local && (
@@ -80,27 +144,16 @@ export const fetchPortfolioData = async () => {
         remote.profile.name === 'Your Name' || 
         remote.profile.email === 'developer@example.com';
 
-      // If user has custom imported data locally, and remote returns default placeholder seed data:
-      // NEVER overwrite custom local data with remote seed placeholder data!
-      if (isLocalCustom && isRemoteSeed) {
-        console.log('Preserving custom local portfolio data over remote seed defaults.');
-        
-        // Background push to backend if valid token exists
-        const token = getAuthToken();
-        if (token && !token.startsWith('mock_')) {
-          saveAllPortfolioData(local).catch(() => {});
-        }
-        return { data: local, source: 'local' };
-      }
-
-      // If remote has customized data, sync to local
       if (!isRemoteSeed) {
         remote.is_custom = true;
         saveLocalData(remote);
         return { data: remote, source: 'api' };
       }
 
-      // If neither has custom data, save remote
+      if (isLocalCustom && isRemoteSeed) {
+        return { data: local, source: 'local' };
+      }
+
       saveLocalData(remote);
       return { data: remote, source: 'api' };
     }
@@ -108,23 +161,48 @@ export const fetchPortfolioData = async () => {
     // API is offline or unreachable
   }
 
+  // 3. Third priority: Local storage copy
   return { data: local, source: 'local' };
 };
 
-// Submit Contact Message (Dual-Mode)
+// Submit Contact Message (Dual-Mode: Direct Supabase + Backend + Local Fallback)
 export const sendContactMessage = async (messageData) => {
+  // 1. Send directly to Supabase contact_messages table
+  try {
+    const sbRes = await fetch(`${SUPABASE_URL}/rest/v1/contact_messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({
+        name: messageData.name,
+        email: messageData.email,
+        subject: messageData.subject || '',
+        message: messageData.message,
+      }),
+    });
+    if (sbRes.ok) {
+      return {
+        status: 'success',
+        message: `Thank you ${messageData.name}! Your message has been received.`,
+      };
+    }
+  } catch {}
+
+  // 2. Fall back to backend /contact
   try {
     const res = await smartFetch('/contact', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(messageData),
     });
-    return await res.json();
-  } catch {
-    // Fall back to local store
-  }
+    if (res.ok) return await res.json();
+  } catch {}
 
-  // Save locally if offline
+  // 3. Save locally if offline
   try {
     const existing = JSON.parse(localStorage.getItem(LOCAL_MESSAGES_KEY) || '[]');
     const newMsg = {
@@ -498,6 +576,22 @@ export const importResumeJson = async (jsonPayload) => {
 
 // Blog Posts API
 export const fetchBlogPosts = async () => {
+  try {
+    const sbRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/blog_posts?select=*&is_published=eq.true&order=created_at.desc`,
+      {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
+    );
+    if (sbRes.ok) {
+      const posts = await sbRes.json();
+      if (posts && posts.length > 0) return posts;
+    }
+  } catch {}
+
   try {
     const res = await smartFetch('/posts');
     if (res.ok) {
