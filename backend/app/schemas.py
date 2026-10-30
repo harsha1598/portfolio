@@ -204,6 +204,7 @@ class PortfolioFullData(BaseModel):
     education: List[EducationOut] = []
     awards: List[AwardOut] = []
     certifications: List[CertificationOut] = []
+    posts: List[BlogPostOut] = []
 
 
 class AdminLogin(BaseModel):
@@ -220,3 +221,35 @@ class Token(BaseModel):
 class PasswordChange(BaseModel):
     current_password: str
     new_password: str
+
+class BlogPostBase(BaseModel):
+    title: str
+    slug: str
+    excerpt: Optional[str] = None
+    content: str
+    tags: Optional[str] = None
+    cover_image: Optional[str] = None
+    is_published: bool = True
+
+
+class BlogPostCreate(BlogPostBase):
+    pass
+
+
+class BlogPostUpdate(BaseModel):
+    title: Optional[str] = None
+    slug: Optional[str] = None
+    excerpt: Optional[str] = None
+    content: Optional[str] = None
+    tags: Optional[str] = None
+    cover_image: Optional[str] = None
+    is_published: Optional[bool] = None
+
+
+class BlogPostOut(BlogPostBase):
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True

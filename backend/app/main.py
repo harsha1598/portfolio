@@ -15,6 +15,7 @@ from .database import Base, engine, get_db
 from .models import (
     AdminUser,
     Award,
+    BlogPost,
     Certification,
     ContactMessage,
     Education,
@@ -50,6 +51,9 @@ from .schemas import (
     SkillOut,
     SkillUpdate,
     Token,
+    BlogPostCreate,
+    BlogPostUpdate,
+    BlogPostOut,
 )
 from .seed import seed_database
 
@@ -67,7 +71,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Harsha Vardhan Reddi - Portfolio API",
+    title="Developer Portfolio & Blog API",
     description="FastAPI + SQLite backend for personal portfolio and content management.",
     version="1.0.0",
     lifespan=lifespan,
@@ -91,7 +95,7 @@ app.add_middleware(
 def root():
     return {
         "status": "healthy",
-        "app": "Harsha Vardhan Reddi Portfolio API",
+        "app": "Portfolio & Blog API",
         "database": "SQLite (portfolio.db)",
     }
 
@@ -102,7 +106,7 @@ def root():
 def health_check():
     return {
         "status": "healthy",
-        "app": "Harsha Vardhan Reddi Portfolio API",
+        "app": "Portfolio & Blog API",
         "database": "SQLite (portfolio.db)",
     }
 
@@ -118,6 +122,7 @@ def get_portfolio_data(db: Session = Depends(get_db)):
     education = db.query(Education).all()
     awards = db.query(Award).order_by(Award.display_order.asc()).all()
     certifications = db.query(Certification).order_by(Certification.display_order.asc()).all()
+    posts = db.query(BlogPost).filter(BlogPost.is_published == True).order_by(BlogPost.created_at.desc()).all()
 
     return PortfolioFullData(
         profile=profile,
@@ -127,6 +132,7 @@ def get_portfolio_data(db: Session = Depends(get_db)):
         education=education,
         awards=awards,
         certifications=certifications,
+        posts=posts,
     )
 
 
@@ -522,6 +528,362 @@ def reset_to_defaults(
 
 
 # -----------------------------
+# Blog Endpoints
+# -----------------------------
+
+@app.get("/posts", response_model=List[BlogPostOut])
+@app.get("/api/posts", response_model=List[BlogPostOut])
+def get_published_posts(db: Session = Depends(get_db)):
+    return db.query(BlogPost).filter(BlogPost.is_published == True).order_by(BlogPost.created_at.desc()).all()
+
+
+@app.get("/posts/{slug}", response_model=BlogPostOut)
+@app.get("/api/posts/{slug}", response_model=BlogPostOut)
+def get_post_by_slug(slug: str, db: Session = Depends(get_db)):
+    post = db.query(BlogPost).filter(BlogPost.slug == slug, BlogPost.is_published == True).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Blog post not found")
+    return post
+
+
+@app.get("/admin/posts", response_model=List[BlogPostOut])
+@app.get("/api/admin/posts", response_model=List[BlogPostOut])
+def get_all_posts_admin(admin: AdminUser = Depends(get_current_admin), db: Session = Depends(get_db)):
+    return db.query(BlogPost).order_by(BlogPost.created_at.desc()).all()
+
+
+@app.post("/admin/posts", response_model=BlogPostOut)
+@app.post("/api/admin/posts", response_model=BlogPostOut)
+def create_blog_post(
+    data: BlogPostCreate,
+    admin: AdminUser = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    # Check slug uniqueness
+    existing = db.query(BlogPost).filter(BlogPost.slug == data.slug).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="A post with this URL slug already exists")
+    post = BlogPost(**data.model_dump())
+    db.add(post)
+    db.commit()
+    db.refresh(post)
+    return post
+
+
+@app.put("/admin/posts/{post_id}", response_model=BlogPostOut)
+@app.put("/api/admin/posts/{post_id}", response_model=BlogPostOut)
+def update_blog_post(
+    post_id: int,
+    data: BlogPostUpdate,
+    admin: AdminUser = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    post = db.query(BlogPost).filter(BlogPost.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Blog post not found")
+    
+    update_dict = data.model_dump(exclude_unset=True)
+    if "slug" in update_dict and update_dict["slug"] != post.slug:
+        existing = db.query(BlogPost).filter(BlogPost.slug == update_dict["slug"]).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Slug already in use by another post")
+            
+    for k, v in update_dict.items():
+        setattr(post, k, v)
+    db.commit()
+    db.refresh(post)
+    return post
+
+
+@app.delete("/admin/posts/{post_id}")
+@app.delete("/api/admin/posts/{post_id}")
+def delete_blog_post(
+    post_id: int,
+    admin: AdminUser = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    post = db.query(BlogPost).filter(BlogPost.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Blog post not found")
+    db.delete(post)
+    db.commit()
+    return {"status": "success", "message": "Blog post deleted"}
+
+
+# -----------------------------
+# Resume JSON Import Endpoint
+# -----------------------------
+
+def clean_html_tags(text: str) -> str:
+    if not text:
+        return ""
+    clean = re.sub(r"<[^>]+>", " ", text)
+    return " ".join(clean.split())
+
+def extract_bullets_from_html(html_text: str) -> List[str]:
+    if not html_text:
+        return []
+    items = re.findall(r"<li><p>(.*?)</p></li>", html_text, re.DOTALL)
+    if not items:
+        items = re.findall(r"<li>(.*?)</li>", html_text, re.DOTALL)
+    bullets = [clean_html_tags(i) for i in items if i.strip()]
+    return bullets
+
+@app.post("/admin/import-resume")
+@app.post("/api/admin/import-resume")
+def import_resume_json(
+    payload: dict,
+    admin: AdminUser = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Imports and maps reactive resume / JSON export data directly into SQLite models.
+    Wipes existing resume records and populates cleanly.
+    """
+    basics = payload.get("basics", {})
+    summary_data = payload.get("summary", {})
+    summary_content = clean_html_tags(summary_data.get("content", ""))
+    
+    # 1. Update / create Profile
+    profile = db.query(Profile).first()
+    if not profile:
+        profile = Profile(name="Portfolio Owner", title="Engineer", email="user@example.com")
+        db.add(profile)
+        db.flush()
+
+    if basics.get("name"):
+        profile.name = basics.get("name")
+    if basics.get("headline"):
+        profile.title = basics.get("headline")
+    if basics.get("email"):
+        profile.email = basics.get("email")
+    if basics.get("phone"):
+        profile.phone = basics.get("phone")
+    if basics.get("location"):
+        profile.location = basics.get("location")
+    if summary_content:
+        profile.summary = summary_content
+    
+    sections = payload.get("sections", {})
+    
+    # Profiles / Social links
+    profiles_list = sections.get("profiles", {}).get("items", [])
+    for p in profiles_list:
+        net = (p.get("network") or "").lower()
+        url = p.get("website", {}).get("url") or ""
+        if "linkedin" in net:
+            profile.linkedin_url = url
+        elif "github" in net:
+            profile.github_url = url
+        elif "hackerrank" in net:
+            profile.hackerrank_url = url
+        elif "x" in net or "twitter" in net:
+            profile.x_url = url
+        elif "leetcode" in net:
+            profile.leetcode_url = url
+
+    # Clear previous relational records
+    db.query(Experience).delete()
+    db.query(Education).delete()
+    db.query(Skill).delete()
+    db.query(Project).delete()
+    db.query(Award).delete()
+    db.query(Certification).delete()
+    db.flush()
+
+    # 2. Experiences
+    exp_items = sections.get("experience", {}).get("items", [])
+    for idx, e in enumerate(exp_items):
+        raw_desc = e.get("description", "")
+        clean_desc = clean_html_tags(raw_desc)
+        bullets = extract_bullets_from_html(raw_desc)
+        
+        # Skills text from description if present
+        skills_match = re.search(r"Skill\(s\)\s*-\s*</strong>(.*?)</p>", raw_desc, re.IGNORECASE)
+        skills_text = clean_html_tags(skills_match.group(1)) if skills_match else ""
+
+        start_date = (e.get("dates", {}) or {}).get("start") or (e.get("period", "").split("–")[0].strip() if "–" in e.get("period", "") else "2020")
+        is_current = bool((e.get("dates", {}) or {}).get("present", False) or "Present" in e.get("period", ""))
+        end_date = "Present" if is_current else ((e.get("dates", {}) or {}).get("end") or (e.get("period", "").split("–")[1].strip() if "–" in e.get("period", "") else ""))
+
+        exp = Experience(
+            company=e.get("company") or "Company",
+            role=e.get("position") or "Software Engineer",
+            location=e.get("location", ""),
+            start_date=start_date,
+            end_date=end_date,
+            is_current=is_current,
+            skills_text=skills_text,
+            description=clean_desc if not bullets else f"Key initiatives at {e.get('company')}:",
+            achievements=json.dumps(bullets) if bullets else json.dumps([clean_desc]) if clean_desc else "[]",
+            display_order=idx + 1,
+        )
+        db.add(exp)
+
+    # 3. Education
+    edu_items = sections.get("education", {}).get("items", [])
+    for idx, ed in enumerate(edu_items):
+        dates = ed.get("dates", {}) or {}
+        db.add(
+            Education(
+                institution=ed.get("school") or "Institution",
+                degree=ed.get("degree") or "Degree",
+                field_of_study=ed.get("area") or "Engineering",
+                grade=ed.get("grade") or "",
+                start_year=dates.get("start") or (ed.get("period", "").split("–")[0].strip() if "–" in ed.get("period", "") else ""),
+                end_year=dates.get("end") or (ed.get("period", "").split("–")[1].strip() if "–" in ed.get("period", "") else ""),
+                url=(ed.get("website", {}) or {}).get("url") or "",
+            )
+        )
+
+    # 4. Skills
+    skill_items = sections.get("skills", {}).get("items", [])
+    for idx, s in enumerate(skill_items):
+        name = s.get("name", "").strip()
+        if not name:
+            continue
+        
+        # Categorize skill
+        n_low = name.lower()
+        if any(x in n_low for x in ["azure", "synapse", "pyspark", "databricks", "cloud", "aws", "gcp"]):
+            category = "Cloud & Big Data"
+        elif any(x in n_low for x in ["python", "django", "java", "spring", "fastapi", "flask", "node"]):
+            category = "Languages & Backend"
+        elif any(x in n_low for x in ["react", "angular", "javascript", "typescript", "html", "css"]):
+            category = "Frontend"
+        elif any(x in n_low for x in ["sql", "mysql", "postgres", "mongo", "database"]):
+            category = "Databases"
+        elif any(x in n_low for x in ["docker", "kubernetes", "git", "devops", "jenkins", "pipeline"]):
+            category = "DevOps & Cloud"
+        else:
+            category = "Core Competencies"
+
+        db.add(
+            Skill(
+                name=name,
+                category=category,
+                proficiency="Expert" if idx < 8 else "Proficient",
+                display_order=idx + 1,
+            )
+        )
+
+    # 5. Projects
+    proj_items = sections.get("projects", {}).get("items", [])
+    for idx, pr in enumerate(proj_items):
+        p_name = pr.get("name") or f"Project {idx + 1}"
+        p_desc = clean_html_tags(pr.get("description", "")) or f"{p_name} architecture and deployment."
+        p_url = (pr.get("website", {}) or {}).get("url") or ""
+        db.add(
+            Project(
+                title=p_name,
+                subtitle="Engineered Solution",
+                description=p_desc,
+                tech_stack="Python, Cloud Services, REST APIs",
+                github_url=p_url,
+                live_url="",
+                highlights=json.dumps([p_desc]),
+                featured=True,
+                display_order=idx + 1,
+            )
+        )
+
+    # 6. Awards
+    award_items = sections.get("awards", {}).get("items", [])
+    for idx, aw in enumerate(award_items):
+        a_title = aw.get("title") or "Recognition"
+        db.add(
+            Award(
+                title=a_title,
+                organization=aw.get("awarder") or "Corporate Honor",
+                year=aw.get("date") or (aw.get("dates", {}) or {}).get("start", ""),
+                description=clean_html_tags(aw.get("description", "")),
+                display_order=idx + 1,
+            )
+        )
+
+    # 7. Certifications
+    cert_items = sections.get("certifications", {}).get("items", [])
+    for idx, ct in enumerate(cert_items):
+        c_title = ct.get("title") or "Certification"
+        db.add(
+            Certification(
+                name=c_title,
+                issuer=ct.get("issuer") or "Accredited Provider",
+                issue_date=ct.get("date") or "",
+                credential_url=(ct.get("website", {}) or {}).get("url") or "",
+                display_order=idx + 1,
+            )
+        )
+
+    db.commit()
+    return {"status": "success", "message": "Resume JSON successfully imported and database updated!"}
+
+
+# -----------------------------
+# Dynamic AI Agent System Prompt
+# -----------------------------
+
+def build_dynamic_agent_prompt(db: Session) -> str:
+    profile = db.query(Profile).first()
+    name = profile.name if profile and profile.name else "the developer"
+    title = profile.title if profile and profile.title else "Full Stack Developer & Data Engineer"
+    summary = profile.summary if profile and profile.summary else ""
+    location = profile.location if profile and profile.location else ""
+    email = profile.email if profile and profile.email else ""
+    phone = profile.phone if profile and profile.phone else ""
+    linkedin = profile.linkedin_url if profile and profile.linkedin_url else ""
+    github = profile.github_url if profile and profile.github_url else ""
+
+    exps = db.query(Experience).order_by(Experience.display_order.asc()).all()
+    exp_bullets = []
+    for e in exps:
+        bullet = f"- {e.role} at {e.company} ({e.start_date} – {e.end_date or 'Present'}): {e.description or ''}"
+        if e.skills_text:
+            bullet += f" [Skills: {e.skills_text}]"
+        exp_bullets.append(bullet)
+
+    skills = db.query(Skill).order_by(Skill.display_order.asc()).all()
+    skill_names = ", ".join([s.name for s in skills[:25]])
+
+    awards = db.query(Award).all()
+    award_names = ", ".join([a.title for a in awards])
+
+    certs = db.query(Certification).all()
+    cert_names = ", ".join([c.name for c in certs])
+
+    prompt = f"""You are the personal AI Assistant and professional representative for {name} ({title}) on this portfolio website.
+Your mission is to represent {name} accurately, engagingly, and professionally to engineering recruiters, hiring managers, and clients.
+
+Profile Overview:
+- Name: {name}
+- Headline / Role: {title}
+- Location: {location}
+- Contact Email: {email}
+- Contact Phone: {phone}
+- LinkedIn: {linkedin}
+- GitHub: {github}
+- Summary: {summary}
+
+Professional Experience:
+{chr(10).join(exp_bullets) if exp_bullets else '- Experienced software and data engineer.'}
+
+Technical Skills:
+{skill_names if skill_names else 'Full Stack, Cloud, Data Engineering'}
+
+Certifications & Awards:
+- Certifications: {cert_names if cert_names else 'None listed'}
+- Awards: {award_names if award_names else 'None listed'}
+
+Guidelines:
+- Speak in the third person about {name} ("{name} has deep expertise in...", "At {exps[0].company if exps else 'their company'}, {name} built...").
+- Keep replies concise, articulate, and technical (2-4 sentences or short bullet points).
+- If recruiters ask about hiring, invite them to leave a message via the contact form or email {email}.
+- Base your answers strictly on the profile details above.
+"""
+    return prompt.strip()
+
+
+# -----------------------------
 # AI Agent Endpoint
 # -----------------------------
 
@@ -532,32 +894,10 @@ from pydantic import BaseModel
 class ChatRequest(BaseModel):
     message: str
 
-HARSHA_AGENT_PROMPT = """
-You are the personal AI Assistant and representative for Harsha Vardhan Reddi on his portfolio website.
-Your mission is to represent Harsha professionally, accurately, and engagingly to engineering recruiters, hiring managers, and clients.
-
-Core Profile of Harsha:
-- Software Engineer 2 at Deloitte USI (Hyderabad)
-- 6+ years experience in Data Engineering, Microservices, and Full Stack Development.
-- Previous Roles: PwC AC India (Data Engineer - Senior Associate), Tata Consultancy Services (Data Engineer & Full Stack Developer), TCS BFSI Garage (Data Science Intern).
-- Core Stacks: Azure Synapse, PySpark, Azure Cloud, Databricks, Azure Pipelines, SQL, MySQL, Python, FastAPI, Django REST, Spring Boot, React JS, Angular, Docker, Kubernetes.
-- Certifications: Azure Fundamentals (AZ-900), Azure Data Fundamentals (DP-900).
-- Education: B.Tech in CSE from GMRIT (Grade: 8.9 CGPA).
-- Milestones: PwC Annual Awards 2024, 8th Rank in TCS Codeathon, Smart India Hackathon Finalist.
-- Contact: harshareddy1598@gmail.com, +91 6303661465, Hyderabad, India.
-- LinkedIn: https://www.linkedin.com/in/harsha-vardhan-reddi
-- GitHub: https://github.com/harsha1598
-
-Guidelines:
-- Speak in the third person about Harsha ("Harsha has extensive experience with...", "At PwC, Harsha built...").
-- Keep replies concise, articulate, and technical (2-4 sentences or short bullet points).
-- If recruiters ask about hiring, confirm he is open to senior data engineering and full-stack opportunities in Hyderabad or Remote, and invite them to leave a message or email him.
-- Never make up false experiences or disclose confidential client information.
-"""
 
 @app.post("/chat")
 @app.post("/api/chat")
-async def chat_with_harsha_agent(req: ChatRequest):
+async def chat_with_harsha_agent(req: ChatRequest, db: Session = Depends(get_db)):
     raw_key = os.getenv("GEMINI_API_KEY", "")
     api_key = raw_key.strip().strip('"').strip("'").strip()
     if not api_key:
@@ -618,7 +958,7 @@ async def chat_with_harsha_agent(req: ChatRequest):
         last_error = ""
         payload = {
             "system_instruction": {
-                "parts": [{"text": HARSHA_AGENT_PROMPT.strip()}]
+                "parts": [{"text": build_dynamic_agent_prompt(db)}]
             },
             "contents": [
                 {"role": "user", "parts": [{"text": req.message}]}

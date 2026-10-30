@@ -9,7 +9,7 @@ export default function ChatWidget({ isOpen: controlledIsOpen, setIsOpen: contro
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      text: "Hi! I'm Harsha's AI Agent. Ask me anything about his work at Deloitte & PwC, Azure data pipelines, or technical skills!",
+      text: "Hi! I'm the personal AI Agent. Ask me anything about engineering experience, cloud architectures, or technical skills!",
     },
   ]);
   const [input, setInput] = useState('');
@@ -43,7 +43,7 @@ export default function ChatWidget({ isOpen: controlledIsOpen, setIsOpen: contro
         ...newMessages,
         {
           role: 'assistant',
-          text: "I'm having trouble connecting right now. Please feel free to email Harsha directly at harshareddy1598@gmail.com!",
+          text: "I'm having trouble connecting right now. Please feel free to reach out via the contact form!",
         },
       ]);
     } finally {
@@ -52,9 +52,9 @@ export default function ChatWidget({ isOpen: controlledIsOpen, setIsOpen: contro
   };
 
   const starterPrompts = [
-    "Tell me about Harsha's experience",
-    "What is his Azure & Big Data stack?",
-    "How can I get in touch with him?",
+    "Tell me about your experience",
+    "What is your core tech stack?",
+    "How can I get in touch?",
   ];
 
   return (
@@ -63,7 +63,7 @@ export default function ChatWidget({ isOpen: controlledIsOpen, setIsOpen: contro
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          aria-label="Open Harsha's AI Agent Chat"
+          aria-label="Open AI Agent Chat"
           className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-slate-900/95 border-2 border-emerald-500/60 hover:border-emerald-400 text-white shadow-2xl shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer group"
         >
           <span className="relative flex h-2.5 w-2.5">
@@ -72,7 +72,7 @@ export default function ChatWidget({ isOpen: controlledIsOpen, setIsOpen: contro
           </span>
           <Bot className="w-5 h-5 text-emerald-400 group-hover:rotate-12 transition-transform" />
           <span className="text-xs font-mono font-bold text-slate-100 tracking-wide">
-            Ask Harsha's AI
+            Ask AI Agent
           </span>
         </button>
       )}
@@ -88,7 +88,7 @@ export default function ChatWidget({ isOpen: controlledIsOpen, setIsOpen: contro
               </div>
               <div>
                 <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
-                  Harsha's AI Agent
+                  Portfolio AI Agent
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 </h3>
                 <p className="text-[10px] text-slate-400 font-mono">

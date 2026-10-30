@@ -207,7 +207,282 @@ export const sendChatMessage = async (message) => {
   } catch (err) {
     return {
       reply:
-        "Harsha is a Software Engineer 2 at Deloitte USI with 6+ years of experience across Azure Synapse, PySpark, FastAPI, and React JS. Please configure the GEMINI_API_KEY in your Vercel Project Settings to unlock live AI responses!",
+        "I am an AI assistant representing the developer. To enable live AI intelligence, please add GEMINI_API_KEY in your Vercel Project Settings!",
     };
   }
 };
+
+// Client-side parser for Resume JSON (Reactive Resume / JSON export format)
+export function parseResumeJson(jsonPayload) {
+  const basics = jsonPayload.basics || {};
+  const summaryContent = jsonPayload.summary?.content || '';
+  const cleanSummary = summaryContent.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
+  const profilesList = jsonPayload.sections?.profiles?.items || [];
+  let linkedin = '', github = '', hackerrank = '', x = '', leetcode = '';
+  for (const p of profilesList) {
+    const net = (p.network || '').toLowerCase();
+    const url = p.website?.url || '';
+    if (net.includes('linkedin')) linkedin = url;
+    else if (net.includes('github')) github = url;
+    else if (net.includes('hackerrank')) hackerrank = url;
+    else if (net.includes('x') || net.includes('twitter')) x = url;
+    else if (net.includes('leetcode')) leetcode = url;
+  }
+
+  const profile = {
+    name: basics.name || 'Developer Portfolio',
+    title: basics.headline || 'Full Stack Developer',
+    email: basics.email || 'developer@example.com',
+    phone: basics.phone || '',
+    location: basics.location || '',
+    summary: cleanSummary,
+    years_experience: 6,
+    linkedin_url: linkedin,
+    github_url: github,
+    hackerrank_url: hackerrank,
+    x_url: x,
+    leetcode_url: leetcode,
+    website_url: basics.website?.url || '',
+    resume_download_url: '#',
+  };
+
+  const expItems = jsonPayload.sections?.experience?.items || [];
+  const experiences = expItems.map((e, idx) => {
+    const rawDesc = e.description || '';
+    const cleanDesc = rawDesc.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const bullets = Array.from(rawDesc.matchAll(/<li>(?:<p>)?(.*?)(?:<\/p>)?<\/li>/gs)).map(m =>
+      m[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+    );
+
+    const skillsMatch = rawDesc.match(/Skill\(s\)\s*-\s*<\/strong>(.*?)<\/p>/i);
+    const skillsText = skillsMatch ? skillsMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+
+    const isCurrent = Boolean(e.dates?.present || e.period?.includes('Present'));
+    const startDate = e.dates?.start || (e.period?.split('–')[0]?.trim()) || '2020';
+    const endDate = isCurrent ? 'Present' : (e.dates?.end || (e.period?.split('–')[1]?.trim()) || '');
+
+    return {
+      id: idx + 1,
+      company: e.company || 'Company',
+      role: e.position || 'Software Engineer',
+      location: e.location || '',
+      start_date: startDate,
+      end_date: endDate,
+      is_current: isCurrent,
+      skills_text: skillsText,
+      description: bullets.length ? `Key initiatives at ${e.company}:` : cleanDesc,
+      achievements: JSON.stringify(bullets.length ? bullets : (cleanDesc ? [cleanDesc] : [])),
+      display_order: idx + 1,
+    };
+  });
+
+  const skillItems = jsonPayload.sections?.skills?.items || [];
+  const skills = skillItems.map((s, idx) => {
+    const name = s.name || '';
+    const nLow = name.toLowerCase();
+    let category = 'Core Competencies';
+    if (['azure', 'synapse', 'pyspark', 'databricks', 'cloud', 'aws', 'gcp'].some(k => nLow.includes(k))) {
+      category = 'Cloud & Big Data';
+    } else if (['python', 'django', 'java', 'spring', 'fastapi', 'flask', 'node'].some(k => nLow.includes(k))) {
+      category = 'Languages & Backend';
+    } else if (['react', 'angular', 'javascript', 'typescript', 'html', 'css'].some(k => nLow.includes(k))) {
+      category = 'Frontend';
+    } else if (['sql', 'mysql', 'postgres', 'mongo', 'database'].some(k => nLow.includes(k))) {
+      category = 'Databases';
+    } else if (['docker', 'kubernetes', 'git', 'devops', 'jenkins', 'pipeline'].some(k => nLow.includes(k))) {
+      category = 'DevOps & Cloud';
+    }
+    return {
+      id: idx + 1,
+      name,
+      category,
+      proficiency: idx < 8 ? 'Expert' : 'Proficient',
+      display_order: idx + 1,
+    };
+  });
+
+  const projItems = jsonPayload.sections?.projects?.items || [];
+  const projects = projItems.map((pr, idx) => ({
+    id: idx + 1,
+    title: pr.name || `Project ${idx + 1}`,
+    subtitle: 'Engineered Solution',
+    description: pr.description?.replace(/<[^>]+>/g, '').trim() || `${pr.name} system implementation.`,
+    tech_stack: 'Python, Cloud Services, REST APIs',
+    github_url: pr.website?.url || '',
+    live_url: '',
+    highlights: JSON.stringify([pr.description?.replace(/<[^>]+>/g, '').trim() || pr.name]),
+    featured: true,
+    display_order: idx + 1,
+  }));
+
+  const eduItems = jsonPayload.sections?.education?.items || [];
+  const education = eduItems.map((ed, idx) => ({
+    id: idx + 1,
+    institution: ed.school || 'University',
+    degree: ed.degree || 'Degree',
+    field_of_study: ed.area || 'Engineering',
+    grade: ed.grade || '',
+    start_year: ed.dates?.start || (ed.period?.split('–')[0]?.trim()) || '',
+    end_year: ed.dates?.end || (ed.period?.split('–')[1]?.trim()) || '',
+    url: ed.website?.url || '',
+  }));
+
+  const awardItems = jsonPayload.sections?.awards?.items || [];
+  const awards = awardItems.map((aw, idx) => ({
+    id: idx + 1,
+    title: aw.title || 'Honor',
+    organization: aw.awarder || 'Organization',
+    year: aw.date || aw.dates?.start || '',
+    description: aw.description?.replace(/<[^>]+>/g, '').trim() || '',
+    display_order: idx + 1,
+  }));
+
+  const certItems = jsonPayload.sections?.certifications?.items || [];
+  const certifications = certItems.map((ct, idx) => ({
+    id: idx + 1,
+    name: ct.title || 'Certificate',
+    issuer: ct.issuer || 'Accredited Issuer',
+    issue_date: ct.date || '',
+    credential_url: ct.website?.url || '',
+    display_order: idx + 1,
+  }));
+
+  return {
+    profile,
+    experiences,
+    skills,
+    projects,
+    education,
+    awards,
+    certifications,
+  };
+}
+
+// Import Resume JSON (Dual-Mode: syncs to backend if online, updates localStorage)
+export const importResumeJson = async (jsonPayload) => {
+  const parsed = parseResumeJson(jsonPayload);
+  
+  // Update localStorage immediately
+  const existing = getLocalData();
+  const updatedData = { ...existing, ...parsed };
+  saveLocalData(updatedData);
+
+  // If authenticated and online, sync to backend
+  const token = getAuthToken();
+  if (token) {
+    try {
+      const res = await smartFetch('/admin/import-resume', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(jsonPayload),
+      });
+      if (res.ok) {
+        return { success: true, data: updatedData, source: 'api' };
+      }
+    } catch (e) {
+      console.warn('Backend sync failed, saved locally:', e);
+    }
+  }
+
+  return { success: true, data: updatedData, source: 'local' };
+};
+
+// Blog Posts API
+export const fetchBlogPosts = async () => {
+  try {
+    const res = await smartFetch('/posts');
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Fall back to local posts
+  }
+  return getLocalData().posts || [];
+};
+
+export const createBlogPost = async (postData) => {
+  const token = getAuthToken();
+  if (token) {
+    try {
+      const res = await smartFetch('/admin/posts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(postData),
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn('Backend create post failed, saving locally:', e);
+    }
+  }
+
+  // Local fallback
+  const local = getLocalData();
+  const newPost = {
+    id: Date.now(),
+    ...postData,
+    created_at: new Date().toISOString(),
+  };
+  local.posts = [newPost, ...(local.posts || [])];
+  saveLocalData(local);
+  return newPost;
+};
+
+export const updateBlogPost = async (id, postData) => {
+  const token = getAuthToken();
+  if (token) {
+    try {
+      const res = await smartFetch(`/admin/posts/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(postData),
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn('Backend update post failed, saving locally:', e);
+    }
+  }
+
+  // Local fallback
+  const local = getLocalData();
+  local.posts = (local.posts || []).map((p) => (p.id === id ? { ...p, ...postData } : p));
+  saveLocalData(local);
+  return postData;
+};
+
+export const deleteBlogPost = async (id) => {
+  const token = getAuthToken();
+  if (token) {
+    try {
+      const res = await smartFetch(`/admin/posts/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn('Backend delete post failed, saving locally:', e);
+    }
+  }
+
+  // Local fallback
+  const local = getLocalData();
+  local.posts = (local.posts || []).filter((p) => p.id !== id);
+  saveLocalData(local);
+  return { status: 'success' };
+};
+

@@ -119,3 +119,17 @@ class ContactMessage(Base):
     message = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     is_read = Column(Boolean, default=False)
+
+class BlogPost(Base):
+    __tablename__ = "blog_posts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(200), nullable=False)
+    slug = Column(String(200), unique=True, index=True, nullable=False)
+    excerpt = Column(Text, nullable=True)
+    content = Column(Text, nullable=False)  # Formatted text / Markdown / HTML
+    tags = Column(String(200), nullable=True)  # Comma-separated tags
+    cover_image = Column(String(255), nullable=True)
+    is_published = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)

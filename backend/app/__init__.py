@@ -1,1 +1,1 @@
-# Harsha Vardhan Reddi - Portfolio Backend
+# Portfolio & Tech Blog Backend

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Terminal, Shield, ArrowUp } from 'lucide-react';
 
-export default function Footer({ onOpenAdmin }) {
+export default function Footer({ profile, onOpenAdmin }) {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -17,7 +17,7 @@ export default function Footer({ onOpenAdmin }) {
             </div>
             <div>
               <p className="text-slate-300 font-semibold">
-                Harsha Vardhan Reddi — Portfolio
+                {profile?.name || 'Developer'} — Portfolio & Tech Blog
               </p>
               <p className="text-[11px] text-slate-500">
                 Engineered with FastAPI · React JS · SQLite · Tailwind CSS
@@ -27,7 +27,7 @@ export default function Footer({ onOpenAdmin }) {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-4">
-            {/* Subtle discreet shield button with no label or tooltip */}
+            {/* Discreet shield button */}
             <button
               onClick={onOpenAdmin}
               className="p-1.5 text-slate-700 hover:text-slate-500 rounded transition-colors cursor-pointer"

@@ -21,6 +21,16 @@ import {
   Eye,
   LogOut,
   Sparkles,
+  FileJson,
+  BookOpen,
+  Edit,
+  Code as CodeIcon,
+  List as ListIcon,
+  Bold,
+  Italic,
+  Quote,
+  Heading,
+  EyeOff,
 } from 'lucide-react';
 import {
   loginAdmin,
@@ -29,6 +39,11 @@ import {
   fetchAdminMessages,
   saveAllPortfolioData,
   resetToDefaults,
+  importResumeJson,
+  parseResumeJson,
+  createBlogPost,
+  updateBlogPost,
+  deleteBlogPost,
 } from '../services/api';
 
 export default function AdminModal({
@@ -45,6 +60,22 @@ export default function AdminModal({
   const [loginError, setLoginError] = useState('');
   const [saveStatus, setSaveStatus] = useState(null);
   const [messages, setMessages] = useState([]);
+
+  // Resume JSON import state
+  const [jsonInput, setJsonInput] = useState('');
+  const [importStatus, setImportStatus] = useState(null);
+
+  // Blog management state
+  const [editingPost, setEditingPost] = useState(null);
+  const [postForm, setPostForm] = useState({
+    title: '',
+    slug: '',
+    excerpt: '',
+    content: '',
+    tags: '',
+    is_published: true,
+  });
+  const [previewMode, setPreviewMode] = useState(false);
 
   // Local editable copy of data
   const [dataCopy, setDataCopy] = useState(null);
@@ -110,6 +141,84 @@ export default function AdminModal({
       setSaveStatus({ type: 'success', text: 'Reset to resume defaults complete!' });
       setTimeout(() => setSaveStatus(null), 3000);
     }
+  };
+
+  const handleApplyResumeJson = async (rawJsonText) => {
+    try {
+      const parsed = JSON.parse(rawJsonText);
+      setImportStatus({ type: 'saving', text: 'Importing resume data...' });
+      
+      const res = await importResumeJson(parsed);
+      if (res && res.data) {
+        setDataCopy(res.data);
+        onDataUpdate(res.data);
+        setImportStatus({ type: 'success', text: 'Resume JSON successfully imported! All portfolio sections have been updated.' });
+        setTimeout(() => {
+          setImportStatus(null);
+          setActiveTab('profile');
+        }, 2000);
+      }
+    } catch (err) {
+      setImportStatus({ type: 'error', text: 'Invalid JSON: ' + err.message });
+    }
+  };
+
+  const handleSavePost = async (e) => {
+    e.preventDefault();
+    if (!postForm.title.trim() || !postForm.content.trim()) {
+      alert('Title and content are required.');
+      return;
+    }
+
+    const slug = postForm.slug.trim() || postForm.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const payload = { ...postForm, slug };
+
+    try {
+      if (editingPost && editingPost.id) {
+        await updateBlogPost(editingPost.id, payload);
+        const updatedPosts = (dataCopy.posts || []).map(p => p.id === editingPost.id ? { ...p, ...payload } : p);
+        const updated = { ...dataCopy, posts: updatedPosts };
+        setDataCopy(updated);
+        onDataUpdate(updated);
+      } else {
+        const created = await createBlogPost(payload);
+        const updated = { ...dataCopy, posts: [created, ...(dataCopy.posts || [])] };
+        setDataCopy(updated);
+        onDataUpdate(updated);
+      }
+      setEditingPost(null);
+      setPostForm({ title: '', slug: '', excerpt: '', content: '', tags: '', is_published: true });
+      setPreviewMode(false);
+      setSaveStatus({ type: 'success', text: 'Blog post saved successfully!' });
+      setTimeout(() => setSaveStatus(null), 3000);
+    } catch (err) {
+      alert('Failed to save blog post: ' + err.message);
+    }
+  };
+
+  const handleDeletePost = async (id) => {
+    if (window.confirm('Are you sure you want to delete this blog post?')) {
+      await deleteBlogPost(id);
+      const updated = { ...dataCopy, posts: (dataCopy.posts || []).filter(p => p.id !== id) };
+      setDataCopy(updated);
+      onDataUpdate(updated);
+    }
+  };
+
+  const insertFormatting = (prefix, suffix = '') => {
+    const textarea = document.getElementById('post-content-editor');
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selected = text.substring(start, end);
+    const replacement = prefix + (selected || 'text') + suffix;
+    const newText = text.substring(0, start) + replacement + text.substring(end);
+    setPostForm({ ...postForm, content: newText });
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + prefix.length, start + prefix.length + (selected ? selected.length : 4));
+    }, 50);
   };
 
   const handleExportJson = () => {
@@ -337,6 +446,35 @@ export default function AdminModal({
                     {messages.length}
                   </span>
                 )}
+              </button>
+
+              <button
+                onClick={() => setActiveTab('import-json')}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
+                  activeTab === 'import-json'
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                }`}
+              >
+                <FileJson className="w-4 h-4 text-emerald-400" />
+                <span>Import Resume JSON</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('blog-manager')}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
+                  activeTab === 'blog-manager'
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <BookOpen className="w-4 h-4 text-cyan-400" />
+                  <span>Blog Manager</span>
+                </div>
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-800 text-cyan-400 font-mono">
+                  {dataCopy?.posts?.length || 0}
+                </span>
               </button>
 
               {/* Data Utilities */}
@@ -1075,6 +1213,376 @@ export default function AdminModal({
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+
+              {/* TAB: Import Resume JSON */}
+              {activeTab === 'import-json' && (
+                <div className="space-y-5 animate-fadeIn">
+                  <div className="pb-3 border-b border-slate-800">
+                    <div className="flex items-center gap-2 text-emerald-400 text-xs font-mono mb-1">
+                      <FileJson className="w-4 h-4" />
+                      <span>Reactive Resume & JSON Importer</span>
+                    </div>
+                    <h3 className="font-bold text-lg text-white">Import Resume JSON</h3>
+                    <p className="text-xs text-slate-400 leading-relaxed mt-1">
+                      Paste or upload your exported resume JSON. This will cleanly parse your <strong>basics, summary, social profiles, experiences, skills, projects, education, awards, and certifications</strong> and apply them directly to your portfolio and AI Agent.
+                    </p>
+                  </div>
+
+                  {importStatus && (
+                    <div
+                      className={`p-3.5 rounded-xl border text-xs font-mono flex items-center gap-2.5 ${
+                        importStatus.type === 'success'
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                          : importStatus.type === 'error'
+                          ? 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                          : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'
+                      }`}
+                    >
+                      <Sparkles className="w-4 h-4 shrink-0 animate-pulse" />
+                      <span>{importStatus.text}</span>
+                    </div>
+                  )}
+
+                  {/* File Upload Option */}
+                  <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold text-slate-200">Upload JSON File</p>
+                      <p className="text-[11px] text-slate-400 font-mono">Select a .json resume export from your device</p>
+                    </div>
+                    <label className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 cursor-pointer transition-colors">
+                      <Upload className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Choose .json File</span>
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            const text = ev.target?.result;
+                            setJsonInput(text);
+                            handleApplyResumeJson(text);
+                          };
+                          reader.readAsText(file);
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  {/* Or Paste Raw JSON */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-mono text-slate-300">
+                        Or Paste Resume JSON Below:
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setJsonInput('')}
+                        className="text-[11px] font-mono text-slate-500 hover:text-slate-300"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    <textarea
+                      rows={14}
+                      value={jsonInput}
+                      onChange={(e) => setJsonInput(e.target.value)}
+                      placeholder='Paste resume JSON here (e.g. {"basics": {"name": "..."}, "sections": {...}})...'
+                      className="w-full p-3.5 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-emerald-300 placeholder-slate-600 outline-none focus:border-emerald-500 transition-colors"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      disabled={!jsonInput.trim()}
+                      onClick={() => handleApplyResumeJson(jsonInput)}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold text-slate-950 bg-gradient-to-r from-emerald-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 disabled:opacity-40 transition-all cursor-pointer shadow-md shadow-emerald-500/20"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      <span>Apply & Sync to Portfolio</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB: Blog Manager */}
+              {activeTab === 'blog-manager' && (
+                <div className="space-y-6 animate-fadeIn">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                    <div>
+                      <h3 className="font-bold text-lg text-white">Blog & Technical Articles</h3>
+                      <p className="text-xs text-slate-400 font-mono">
+                        Publish, format, and edit technical articles on your public portfolio
+                      </p>
+                    </div>
+
+                    {!editingPost && (
+                      <button
+                        onClick={() => {
+                          setEditingPost({ isNew: true });
+                          setPostForm({ title: '', slug: '', excerpt: '', content: '', tags: '', is_published: true });
+                          setPreviewMode(false);
+                        }}
+                        className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Write New Post</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {editingPost ? (
+                    /* Blog Post Editor Form */
+                    <form onSubmit={handleSavePost} className="space-y-4 bg-slate-950/70 p-5 rounded-2xl border border-slate-800">
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                        <span className="text-xs font-mono font-bold text-emerald-400">
+                          {editingPost.isNew ? 'New Blog Article' : `Editing: ${editingPost.title}`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setEditingPost(null)}
+                          className="text-xs text-slate-400 hover:text-white"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-mono text-slate-400 mb-1">Article Title *</label>
+                          <input
+                            type="text"
+                            required
+                            value={postForm.title}
+                            onChange={(e) => {
+                              const title = e.target.value;
+                              const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                              setPostForm({ ...postForm, title, slug: postForm.slug ? postForm.slug : slug });
+                            }}
+                            placeholder="e.g. Scaling Real-Time Pipelines on Azure Synapse"
+                            className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-mono text-slate-400 mb-1">URL Slug</label>
+                          <input
+                            type="text"
+                            value={postForm.slug}
+                            onChange={(e) => setPostForm({ ...postForm, slug: e.target.value })}
+                            placeholder="e.g. scaling-real-time-pipelines"
+                            className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-cyan-400 font-mono outline-none focus:border-emerald-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-mono text-slate-400 mb-1">Tags (Comma-separated)</label>
+                          <input
+                            type="text"
+                            value={postForm.tags}
+                            onChange={(e) => setPostForm({ ...postForm, tags: e.target.value })}
+                            placeholder="e.g. Python, PySpark, Architecture, Azure"
+                            className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white outline-none focus:border-emerald-500"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-3 pt-5">
+                          <label className="flex items-center gap-2 text-xs font-mono text-slate-300 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={postForm.is_published}
+                              onChange={(e) => setPostForm({ ...postForm, is_published: e.target.checked })}
+                              className="rounded border-slate-700 text-emerald-500 focus:ring-emerald-500"
+                            />
+                            <span>Publish Live to Blog</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-mono text-slate-400 mb-1">Short Excerpt / Summary</label>
+                        <input
+                          type="text"
+                          value={postForm.excerpt}
+                          onChange={(e) => setPostForm({ ...postForm, excerpt: e.target.value })}
+                          placeholder="Brief 1-2 sentence preview shown on article cards..."
+                          className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 outline-none focus:border-emerald-500"
+                        />
+                      </div>
+
+                      {/* Content Editor with Formatting Toolbar */}
+                      <div>
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2 p-1.5 rounded-xl bg-slate-900 border border-slate-800">
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => insertFormatting('**', '**')}
+                              title="Bold"
+                              className="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"
+                            >
+                              <Bold className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => insertFormatting('*', '*')}
+                              title="Italic"
+                              className="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"
+                            >
+                              <Italic className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => insertFormatting('### ')}
+                              title="Heading"
+                              className="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white font-mono text-xs font-bold"
+                            >
+                              H3
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => insertFormatting('```python\n', '\n```')}
+                              title="Code Block"
+                              className="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"
+                            >
+                              <CodeIcon className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => insertFormatting('- ')}
+                              title="Bullet List"
+                              className="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"
+                            >
+                              <ListIcon className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => insertFormatting('> ')}
+                              title="Blockquote"
+                              className="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white"
+                            >
+                              <Quote className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setPreviewMode(!previewMode)}
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono bg-slate-800 hover:bg-slate-700 text-cyan-400"
+                          >
+                            {previewMode ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                            <span>{previewMode ? 'Edit Mode' : 'Live Preview'}</span>
+                          </button>
+                        </div>
+
+                        {previewMode ? (
+                          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 min-h-[220px] max-h-[350px] overflow-y-auto text-xs sm:text-sm text-slate-200 leading-relaxed space-y-2">
+                            {postForm.content.split('\n').map((line, i) => (
+                              <p key={i}>{line}</p>
+                            ))}
+                          </div>
+                        ) : (
+                          <textarea
+                            id="post-content-editor"
+                            required
+                            rows={10}
+                            value={postForm.content}
+                            onChange={(e) => setPostForm({ ...postForm, content: e.target.value })}
+                            placeholder="Write your article with markdown formatting (### Heading, - Bullet, ```code```, **bold**)..."
+                            className="w-full p-3.5 rounded-xl bg-slate-900 border border-slate-800 font-mono text-xs text-white placeholder-slate-600 outline-none focus:border-emerald-500"
+                          />
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-end gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingPost(null)}
+                          className="px-4 py-2 rounded-xl text-xs bg-slate-900 hover:bg-slate-800 text-slate-400"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          className="flex items-center gap-2 px-5 py-2 rounded-xl text-xs font-semibold text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-colors cursor-pointer"
+                        >
+                          <Save className="w-3.5 h-3.5" />
+                          <span>{editingPost.isNew ? 'Publish Article' : 'Update Article'}</span>
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    /* List of existing posts */
+                    <div className="space-y-3">
+                      {(dataCopy?.posts || []).length === 0 ? (
+                        <div className="p-8 text-center text-slate-500 font-mono text-xs rounded-xl bg-slate-950/40 border border-slate-800">
+                          No articles in database yet. Click "Write New Post" to publish your first article!
+                        </div>
+                      ) : (
+                        (dataCopy?.posts || []).map((p) => (
+                          <div
+                            key={p.id || p.slug}
+                            className="p-4 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+                          >
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-bold text-sm text-white">{p.title}</h4>
+                                <span
+                                  className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
+                                    p.is_published
+                                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                                      : 'bg-slate-800 text-slate-400'
+                                  }`}
+                                >
+                                  {p.is_published ? 'Published' : 'Draft'}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-400 font-mono">
+                                /{p.slug} · {p.tags || 'General'}
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-2 self-end sm:self-center">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingPost(p);
+                                  setPostForm({
+                                    title: p.title || '',
+                                    slug: p.slug || '',
+                                    excerpt: p.excerpt || '',
+                                    content: p.content || '',
+                                    tags: p.tags || '',
+                                    is_published: p.is_published !== false,
+                                  });
+                                  setPreviewMode(false);
+                                }}
+                                className="p-2 text-slate-400 hover:text-white hover:bg-slate-900 rounded-lg transition-colors"
+                                title="Edit Post"
+                              >
+                                <Edit className="w-4 h-4 text-cyan-400" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeletePost(p.id)}
+                                className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-900 rounded-lg transition-colors"
+                                title="Delete Post"
+                              >
+                                <Trash2 className="w-4 h-4 text-rose-400" />
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -64,7 +64,7 @@ export default function Contact({ profile }) {
 
               <div className="space-y-4">
                 <a
-                  href={`mailto:${profile?.email || 'harshareddy1598@gmail.com'}`}
+                  href={`mailto:${profile?.email || 'developer@example.com'}`}
                   className="flex items-center gap-3 p-3 rounded-xl bg-slate-900 border border-slate-800 hover:border-emerald-500/40 text-slate-300 hover:text-white transition-colors"
                 >
                   <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
@@ -73,7 +73,7 @@ export default function Contact({ profile }) {
                   <div>
                     <p className="text-[11px] font-mono text-slate-500">Email</p>
                     <p className="text-xs sm:text-sm font-semibold">
-                      {profile?.email || 'harshareddy1598@gmail.com'}
+                      {profile?.email || 'developer@example.com'}
                     </p>
                   </div>
                 </a>
@@ -172,7 +172,7 @@ export default function Contact({ profile }) {
                   rows={5}
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  placeholder="Hello Harsha, I saw your background in Azure Synapse and FastAPI and would love to connect..."
+                  placeholder="Hello, I saw your portfolio and would love to connect regarding opportunities..."
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 focus:border-emerald-500 text-slate-200 text-sm outline-none transition-colors resize-none"
                 />
               </div>

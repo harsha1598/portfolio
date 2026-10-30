@@ -28,9 +28,9 @@ export default function Hero({ profile, onOpenChat }) {
           {/* Terminal Command Pill */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-xs font-mono text-slate-300 mb-6 shadow-inner">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-slate-500">harsha@cloud:~$</span>
+            <span className="text-slate-500">dev@cloud:~$</span>
             <span className="text-emerald-400 font-semibold">whoami --verbose</span>
-            <span className="text-slate-400 hidden sm:inline">| Software Engineer 2 @ Deloitte</span>
+            <span className="text-slate-400 hidden sm:inline">| Data & Full Stack Engineer</span>
           </div>
 
           {/* Main Headline */}
@@ -102,7 +102,7 @@ export default function Hero({ profile, onOpenChat }) {
               className="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl font-semibold text-emerald-300 bg-slate-900/90 hover:bg-slate-800 border-2 border-emerald-500/40 hover:border-emerald-400 transition-all shadow-lg shadow-emerald-500/10 hover:scale-105 cursor-pointer group"
             >
               <Bot className="w-5 h-5 text-emerald-400 group-hover:rotate-12 transition-transform" />
-              <span>Ask Harsha's AI</span>
+              <span>Ask AI Agent</span>
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -114,11 +114,11 @@ export default function Hero({ profile, onOpenChat }) {
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-slate-200 bg-slate-900/80 hover:bg-slate-800 border border-slate-700/80 hover:border-emerald-500/40 transition-all"
             >
               <Mail className="w-4 h-4 text-emerald-400" />
-              <span>Contact Harsha</span>
+              <span>Get in Touch</span>
             </a>
 
             <a
-              href="mailto:harshareddy1598@gmail.com"
+              href={`mailto:${profile.email || "developer@example.com"}`}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-xl font-mono text-sm text-slate-400 hover:text-white bg-slate-900/40 hover:bg-slate-800/60 border border-slate-800 transition-all"
             >
               <Download className="w-4 h-4" />

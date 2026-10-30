@@ -10,6 +10,7 @@ import Contact from './components/Contact';
 import Footer from './components/Footer';
 import AdminModal from './components/AdminModal';
 import ChatWidget from './components/ChatWidget';
+import Blog from './components/Blog';
 import { fetchPortfolioData, checkApiHealth } from './services/api';
 import { defaultPortfolioData } from './data/defaultData';
 
@@ -18,6 +19,7 @@ export default function App() {
   const [isApiOnline, setIsApiOnline] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [currentView, setCurrentView] = useState('portfolio'); // 'portfolio' | 'blog'
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,6 +38,33 @@ export default function App() {
     init();
   }, []);
 
+  // Listen to URL hash for navigation (#blog vs #portfolio)
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.toLowerCase();
+      if (hash === '#blog' || window.location.search.includes('page=blog')) {
+        setCurrentView('blog');
+      } else {
+        setCurrentView('portfolio');
+      }
+    };
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
+
+  const navigateToBlog = () => {
+    window.location.hash = '#blog';
+    setCurrentView('blog');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const navigateToPortfolio = () => {
+    window.location.hash = '';
+    setCurrentView('portfolio');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   // Keyboard shortcut listener for Ctrl + Shift + A
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -52,7 +81,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-[#07090e] flex flex-col items-center justify-center text-slate-400 font-mono text-sm">
         <div className="w-10 h-10 border-2 border-emerald-400/20 border-t-emerald-400 rounded-full animate-spin mb-4" />
-        <span>Initializing Harsha's Portfolio Engine...</span>
+        <span>Initializing Portfolio Engine...</span>
       </div>
     );
   }
@@ -60,26 +89,40 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#07090e] text-slate-100 selection:bg-emerald-500/20 selection:text-emerald-300">
       <Navbar
+        profile={portfolioData.profile}
+        currentView={currentView}
+        onNavigateBlog={navigateToBlog}
+        onNavigatePortfolio={navigateToPortfolio}
         onOpenAdmin={() => setIsAdminOpen(true)}
         isApiOnline={isApiOnline}
         onOpenChat={() => setIsChatOpen(true)}
       />
 
-      <main>
-        <Hero profile={portfolioData.profile} onOpenChat={() => setIsChatOpen(true)} />
-        <About profile={portfolioData.profile} />
-        <Experience experiences={portfolioData.experiences} />
-        <Skills skills={portfolioData.skills} />
-        <Projects projects={portfolioData.projects} />
-        <Credentials
-          education={portfolioData.education}
-          awards={portfolioData.awards}
-          certifications={portfolioData.certifications}
+      {currentView === 'blog' ? (
+        <Blog
+          posts={portfolioData.posts || []}
+          onBackToPortfolio={navigateToPortfolio}
         />
-        <Contact profile={portfolioData.profile} />
-      </main>
+      ) : (
+        <main>
+          <Hero profile={portfolioData.profile} onOpenChat={() => setIsChatOpen(true)} />
+          <About profile={portfolioData.profile} />
+          <Experience experiences={portfolioData.experiences} />
+          <Skills skills={portfolioData.skills} />
+          <Projects projects={portfolioData.projects} />
+          <Credentials
+            education={portfolioData.education}
+            awards={portfolioData.awards}
+            certifications={portfolioData.certifications}
+          />
+          <Contact profile={portfolioData.profile} />
+        </main>
+      )}
 
-      <Footer onOpenAdmin={() => setIsAdminOpen(true)} />
+      <Footer
+        profile={portfolioData.profile}
+        onOpenAdmin={() => setIsAdminOpen(true)}
+      />
 
       {/* Floating AI Agent Chat Widget */}
       <ChatWidget isOpen={isChatOpen} setIsOpen={setIsChatOpen} />

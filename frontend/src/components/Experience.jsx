@@ -20,7 +20,7 @@ export default function Experience({ experiences }) {
             Work Experience & Enterprise Roles
           </h2>
           <p className="mt-4 text-base text-slate-400">
-            6 years of demonstrated progression across Deloitte USI, PwC AC India, and TCS.
+            Demonstrated engineering progression across enterprise platforms and scalable data systems.
           </p>
         </div>
 

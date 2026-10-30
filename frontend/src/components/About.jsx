@@ -39,7 +39,7 @@ export default function About({ profile }) {
       icon: <ShieldCheck className="w-6 h-6 text-teal-400" />,
       title: "Enterprise Delivery",
       description:
-        "6 years of production-proven delivery across Deloitte USI, PwC AC India, and TCS with rigorous code reviews and stakeholder collaboration.",
+        "Production-proven engineering delivery with high-performance architectures, rigorous code reviews, and stakeholder collaboration.",
     },
   ];
 
