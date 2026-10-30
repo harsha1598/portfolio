@@ -97,6 +97,7 @@ app.add_middleware(
 # -----------------------------
 
 @app.get("/")
+@app.get("/api")
 def root():
     from .database import db_status
     return {
