@@ -565,63 +565,78 @@ async def chat_with_harsha_agent(req: ChatRequest):
             "reply": "Hello! I am Harsha's AI Agent. To activate live responses, add the GEMINI_API_KEY environment variable in your Vercel Project Settings."
         }
 
-    # Universal model fallback list (1.5-flash is free and universally available)
-    models_to_try = [
-        "gemini-1.5-flash",
-        "gemini-2.0-flash",
-        "gemini-2.0-flash-exp",
-        "gemini-1.5-pro",
-    ]
-
-    payload = {
-        "system_instruction": {
-            "parts": [{"text": HARSHA_AGENT_PROMPT.strip()}]
-        },
-        "contents": [
-            {"role": "user", "parts": [{"text": req.message}]}
-        ],
-        "generationConfig": {
-            "temperature": 0.4,
-            "maxOutputTokens": 600
-        }
-    }
-
     headers = {
         "x-goog-api-key": api_key,
         "Content-Type": "application/json"
     }
 
-    last_error_detail = ""
-    async with httpx.AsyncClient(timeout=20.0) as client:
-        for model in models_to_try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
-            try:
-                resp = await client.post(url, json=payload, headers=headers)
-                if resp.status_code == 200:
-                    data = resp.json()
-                    candidates = data.get("candidates", [])
-                    if candidates and "content" in candidates[0]:
-                        text = candidates[0]["content"]["parts"][0]["text"]
-                        return {"reply": text}
-                    return {"reply": "Received an empty response from Gemini."}
-
-                # If 404, this specific model is not enabled for this key/version; try next
-                if resp.status_code == 404:
-                    last_error_detail = f"Model {model} returned 404"
-                    continue
-
-                # For other errors (e.g. 400 Bad Request, 403 Forbidden), inspect message
+    async with httpx.AsyncClient(timeout=25.0) as client:
+        # Step 1: Query Google ListModels to validate key and get supported models
+        list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
+        try:
+            list_resp = await client.get(list_url, headers=headers)
+            if list_resp.status_code != 200:
                 try:
-                    err_json = resp.json()
-                    msg = err_json.get("error", {}).get("message", resp.text)
-                    return {"reply": f"Gemini API ({resp.status_code}): {msg}"}
+                    err_msg = list_resp.json().get("error", {}).get("message", list_resp.text)
                 except Exception:
-                    return {"reply": f"Gemini API returned status {resp.status_code}: {resp.text}"}
+                    err_msg = list_resp.text
+                return {"reply": f"Gemini API authentication failed ({list_resp.status_code}): {err_msg}"}
 
-            except Exception as e:
-                last_error_detail = str(e)
-                continue
+            models_data = list_resp.json().get("models", [])
+            valid_models = [
+                m["name"] for m in models_data 
+                if "generateContent" in m.get("supportedGenerationMethods", [])
+            ]
+        except Exception as e:
+            return {"reply": f"Unable to reach Google Gemini API: {str(e)}"}
 
-    return {
-        "reply": f"Could not generate reply ({last_error_detail}). Please verify your GEMINI_API_KEY has Generative Language API enabled in Google AI Studio."
-    }
+        if not valid_models:
+            return {"reply": "Your Gemini API key is valid, but no text generation models were found for this key."}
+
+        # Step 2: Pick best model (prefer flash models, then gemini models)
+        chosen_model = None
+        for pref in ["flash", "gemini-1.5", "gemini-2.0", "gemini"]:
+            for m in valid_models:
+                if pref in m:
+                    chosen_model = m
+                    break
+            if chosen_model:
+                break
+
+        if not chosen_model:
+            chosen_model = valid_models[0]
+
+        model_path = chosen_model if chosen_model.startswith("models/") else f"models/{chosen_model}"
+
+        # Step 3: Send generateContent request
+        gen_url = f"https://generativelanguage.googleapis.com/v1beta/{model_path}:generateContent?key={api_key}"
+        payload = {
+            "system_instruction": {
+                "parts": [{"text": HARSHA_AGENT_PROMPT.strip()}]
+            },
+            "contents": [
+                {"role": "user", "parts": [{"text": req.message}]}
+            ],
+            "generationConfig": {
+                "temperature": 0.4,
+                "maxOutputTokens": 600
+            }
+        }
+
+        try:
+            gen_resp = await client.post(gen_url, json=payload, headers=headers)
+            if gen_resp.status_code == 200:
+                data = gen_resp.json()
+                candidates = data.get("candidates", [])
+                if candidates and "content" in candidates[0]:
+                    text = candidates[0]["content"]["parts"][0]["text"]
+                    return {"reply": text}
+                return {"reply": "Received empty response from Gemini."}
+            else:
+                try:
+                    err_msg = gen_resp.json().get("error", {}).get("message", gen_resp.text)
+                except Exception:
+                    err_msg = gen_resp.text
+                return {"reply": f"Gemini API ({gen_resp.status_code}): {err_msg}"}
+        except Exception as e:
+            return {"reply": f"Error communicating with Gemini: {str(e)}"}
