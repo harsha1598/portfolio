@@ -87,6 +87,16 @@ app.add_middleware(
 # Public Endpoints
 # -----------------------------
 
+@app.get("/")
+def root():
+    return {
+        "status": "healthy",
+        "app": "Harsha Vardhan Reddi Portfolio API",
+        "database": "SQLite (portfolio.db)",
+    }
+
+
+@app.get("/health")
 @app.get("/api/health")
 def health_check():
     return {
@@ -96,6 +106,7 @@ def health_check():
     }
 
 
+@app.get("/portfolio", response_model=PortfolioFullData)
 @app.get("/api/portfolio", response_model=PortfolioFullData)
 def get_portfolio_data(db: Session = Depends(get_db)):
     profile = db.query(Profile).first()

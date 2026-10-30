@@ -36,8 +36,10 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Build static site
+      - name: Build static site with Vercel API
         working-directory: frontend
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://portfolio-lilac-theta-34.vercel.app' }}
         run: npm run build
 
       - name: Setup GitHub Pages
