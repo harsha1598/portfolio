@@ -858,62 +858,13 @@ def get_gemini_client() -> httpx.AsyncClient:
 
 
 # Preferred ultra-fast production models in priority order.
-# Mapped directly to available models for sub-second conversational latency.
+# Verified: gemini-3.5-flash-lite returns sub-second responses (~0.5s) without thinking overhead.
 PREFERRED_FAST_MODELS = [
-    "gemini-2.5-flash-lite",
-    "gemini-flash-lite-latest",
-    "gemini-2.5-flash",
-    "gemini-flash-latest",
-    "gemini-3.8-flash",
     "gemini-3.5-flash-lite",
+    "gemini-flash-lite-latest",
     "gemini-3.5-flash",
+    "gemini-flash-latest",
 ]
-
-
-@app.get("/models")
-@app.get("/api/models")
-async def list_available_gemini_models():
-    raw_key = os.getenv("GEMINI_API_KEY", "")
-    api_key = raw_key.strip().strip('"').strip("'").strip()
-    if not api_key:
-        return {"error": "GEMINI_API_KEY not configured"}
-    
-    headers = {"x-goog-api-key": api_key}
-    list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        try:
-            resp = await client.get(list_url, headers=headers)
-            if resp.status_code == 200:
-                data = resp.json()
-                models = [m.get("name") for m in data.get("models", []) if "generateContent" in m.get("supportedGenerationMethods", [])]
-                return {"status_code": 200, "models": models}
-            return {"status_code": resp.status_code, "error": resp.text}
-        except Exception as e:
-            return {"error": str(e)}
-
-
-@app.get("/test-models")
-@app.get("/api/test-models")
-async def test_candidate_models():
-    raw_key = os.getenv("GEMINI_API_KEY", "")
-    api_key = raw_key.strip().strip('"').strip("'").strip()
-    headers = {"x-goog-api-key": api_key, "Content-Type": "application/json"}
-    payload = {"contents": [{"role": "user", "parts": [{"text": "Say hi in one word"}]}]}
-    results = {}
-    async with httpx.AsyncClient(timeout=8.0) as client:
-        for m in PREFERRED_FAST_MODELS:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={api_key}"
-            try:
-                t0 = time.time()
-                resp = await client.post(url, json=payload, headers=headers)
-                results[m] = {
-                    "status_code": resp.status_code,
-                    "elapsed": round(time.time() - t0, 2),
-                    "body": resp.json() if resp.status_code == 200 else resp.text[:200]
-                }
-            except Exception as e:
-                results[m] = {"error": str(e)}
-    return results
 
 
 @app.post("/chat")
