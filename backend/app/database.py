@@ -34,6 +34,17 @@ if raw_db_url:
     connect_args = {}
     if "postgresql" in target_url:
         try:
+            from sqlalchemy.engine.url import make_url
+            url_obj = make_url(target_url)
+            query_dict = dict(url_obj.query)
+            # Remove parameters not accepted by pg8000.connect
+            query_dict.pop("sslmode", None)
+            query_dict.pop("sslrootcert", None)
+            target_url = url_obj.set(query=query_dict).render_as_string(hide_password=False)
+        except Exception as parse_err:
+            print("URL query cleanup warning:", parse_err)
+
+        try:
             # Supabase PostgreSQL requires SSL encryption
             ssl_ctx = ssl.create_default_context()
             ssl_ctx.check_hostname = False
