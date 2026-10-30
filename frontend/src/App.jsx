@@ -53,6 +53,19 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
 
+  // Dynamically update document title based on uploaded JSON profile data and current view
+  useEffect(() => {
+    if (portfolioData?.profile?.name) {
+      const name = portfolioData.profile.name;
+      const role = portfolioData.profile.title || 'Engineering Portfolio';
+      if (currentView === 'blog') {
+        document.title = `${name} | Technical Blog & Articles`;
+      } else {
+        document.title = `${name} | ${role}`;
+      }
+    }
+  }, [portfolioData, currentView]);
+
   const navigateToBlog = () => {
     window.location.hash = '#blog';
     setCurrentView('blog');
@@ -100,6 +113,7 @@ export default function App() {
 
       {currentView === 'blog' ? (
         <Blog
+          profile={portfolioData.profile}
           posts={portfolioData.posts || []}
           onBackToPortfolio={navigateToPortfolio}
         />

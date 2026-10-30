@@ -1,10 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Tag, ArrowLeft, Clock, Share2, BookOpen, ChevronRight } from 'lucide-react';
 
-export default function Blog({ posts = [], onBackToPortfolio }) {
+export default function Blog({ profile, posts = [], onBackToPortfolio }) {
   const [selectedPostSlug, setSelectedPostSlug] = useState(null);
 
   const selectedPost = posts.find((p) => p.slug === selectedPostSlug);
+
+  useEffect(() => {
+    const author = profile?.name || 'Developer';
+    if (selectedPost) {
+      document.title = `${selectedPost.title} | ${author}`;
+    } else {
+      document.title = `${author} | Technical Blog & Articles`;
+    }
+  }, [selectedPost, profile]);
 
   // Markdown / formatted text simple renderer
   const renderFormattedContent = (content) => {
