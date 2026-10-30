@@ -593,23 +593,29 @@ async def chat_with_harsha_agent(req: ChatRequest):
         if not valid_models:
             return {"reply": "Your Gemini API key is valid, but no text generation models were found for this key."}
 
-        # Step 2: Pick best model (prefer flash models, then gemini models)
-        chosen_model = None
-        for pref in ["flash", "gemini-1.5", "gemini-2.0", "gemini"]:
-            for m in valid_models:
-                if pref in m:
-                    chosen_model = m
-                    break
-            if chosen_model:
-                break
+        # Step 2: Order models by modern preference
+        def model_priority(m_name: str) -> int:
+            name_lower = m_name.lower()
+            if "gemini-3.8-flash" in name_lower:
+                return 0
+            if "gemini-3" in name_lower and "flash" in name_lower:
+                return 1
+            if "gemini-2.0-flash" in name_lower:
+                return 2
+            if "gemini-1.5-flash" in name_lower:
+                return 3
+            if "flash" in name_lower:
+                return 4
+            if "gemini-3" in name_lower:
+                return 5
+            if "gemini" in name_lower:
+                return 6
+            return 10
 
-        if not chosen_model:
-            chosen_model = valid_models[0]
+        sorted_models = sorted(valid_models, key=model_priority)
 
-        model_path = chosen_model if chosen_model.startswith("models/") else f"models/{chosen_model}"
-
-        # Step 3: Send generateContent request
-        gen_url = f"https://generativelanguage.googleapis.com/v1beta/{model_path}:generateContent?key={api_key}"
+        # Step 3: Try models in sorted order until one succeeds
+        last_error = ""
         payload = {
             "system_instruction": {
                 "parts": [{"text": HARSHA_AGENT_PROMPT.strip()}]
@@ -623,20 +629,27 @@ async def chat_with_harsha_agent(req: ChatRequest):
             }
         }
 
-        try:
-            gen_resp = await client.post(gen_url, json=payload, headers=headers)
-            if gen_resp.status_code == 200:
-                data = gen_resp.json()
-                candidates = data.get("candidates", [])
-                if candidates and "content" in candidates[0]:
-                    text = candidates[0]["content"]["parts"][0]["text"]
-                    return {"reply": text}
-                return {"reply": "Received empty response from Gemini."}
-            else:
+        for model in sorted_models:
+            model_path = model if model.startswith("models/") else f"models/{model}"
+            gen_url = f"https://generativelanguage.googleapis.com/v1beta/{model_path}:generateContent?key={api_key}"
+            try:
+                gen_resp = await client.post(gen_url, json=payload, headers=headers)
+                if gen_resp.status_code == 200:
+                    data = gen_resp.json()
+                    candidates = data.get("candidates", [])
+                    if candidates and "content" in candidates[0]:
+                        text = candidates[0]["content"]["parts"][0]["text"]
+                        return {"reply": text}
+                    return {"reply": "Received empty response from Gemini."}
+
                 try:
                     err_msg = gen_resp.json().get("error", {}).get("message", gen_resp.text)
                 except Exception:
                     err_msg = gen_resp.text
-                return {"reply": f"Gemini API ({gen_resp.status_code}): {err_msg}"}
-        except Exception as e:
-            return {"reply": f"Error communicating with Gemini: {str(e)}"}
+                last_error = f"{model_path}: {err_msg}"
+                continue
+            except Exception as e:
+                last_error = f"{model_path}: {str(e)}"
+                continue
+
+        return {"reply": f"Could not generate reply ({last_error})."}
