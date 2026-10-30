@@ -558,16 +558,24 @@ Guidelines:
 @app.post("/chat")
 @app.post("/api/chat")
 async def chat_with_harsha_agent(req: ChatRequest):
-    api_key = os.getenv("GEMINI_API_KEY")
+    raw_key = os.getenv("GEMINI_API_KEY", "")
+    api_key = raw_key.strip().strip('"').strip("'").strip()
     if not api_key:
         return {
             "reply": "Hello! I am Harsha's AI Agent. To activate live responses, add the GEMINI_API_KEY environment variable in your Vercel Project Settings."
         }
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+    # Universal model fallback list (1.5-flash is free and universally available)
+    models_to_try = [
+        "gemini-1.5-flash",
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-exp",
+        "gemini-1.5-pro",
+    ]
+
     payload = {
         "system_instruction": {
-            "parts": [{"text": HARSHA_AGENT_PROMPT}]
+            "parts": [{"text": HARSHA_AGENT_PROMPT.strip()}]
         },
         "contents": [
             {"role": "user", "parts": [{"text": req.message}]}
@@ -578,14 +586,42 @@ async def chat_with_harsha_agent(req: ChatRequest):
         }
     }
 
-    async with httpx.AsyncClient(timeout=15.0) as client:
-        try:
-            resp = await client.post(url, json=payload)
-            if resp.status_code == 200:
-                data = resp.json()
-                text = data["candidates"][0]["content"]["parts"][0]["text"]
-                return {"reply": text}
-            else:
-                return {"reply": f"Gemini API returned status {resp.status_code}. Please verify your API key."}
-        except Exception as e:
-            return {"reply": f"AI service temporarily unavailable: {str(e)}"}
+    headers = {
+        "x-goog-api-key": api_key,
+        "Content-Type": "application/json"
+    }
+
+    last_error_detail = ""
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        for model in models_to_try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+            try:
+                resp = await client.post(url, json=payload, headers=headers)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    candidates = data.get("candidates", [])
+                    if candidates and "content" in candidates[0]:
+                        text = candidates[0]["content"]["parts"][0]["text"]
+                        return {"reply": text}
+                    return {"reply": "Received an empty response from Gemini."}
+
+                # If 404, this specific model is not enabled for this key/version; try next
+                if resp.status_code == 404:
+                    last_error_detail = f"Model {model} returned 404"
+                    continue
+
+                # For other errors (e.g. 400 Bad Request, 403 Forbidden), inspect message
+                try:
+                    err_json = resp.json()
+                    msg = err_json.get("error", {}).get("message", resp.text)
+                    return {"reply": f"Gemini API ({resp.status_code}): {msg}"}
+                except Exception:
+                    return {"reply": f"Gemini API returned status {resp.status_code}: {resp.text}"}
+
+            except Exception as e:
+                last_error_detail = str(e)
+                continue
+
+    return {
+        "reply": f"Could not generate reply ({last_error_detail}). Please verify your GEMINI_API_KEY has Generative Language API enabled in Google AI Studio."
+    }
