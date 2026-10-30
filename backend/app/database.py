@@ -12,6 +12,11 @@ db_status = {
     "connected": True,
     "error": None,
     "driver": "sqlite",
+    "host": None,
+    "port": None,
+    "user": None,
+    "database": None,
+    "masked_url": None,
 }
 
 
@@ -30,12 +35,21 @@ if raw_db_url:
         target_url = target_url.replace("postgres://", "postgresql+pg8000://", 1)
     elif target_url.startswith("postgresql://"):
         target_url = target_url.replace("postgresql://", "postgresql+pg8000://", 1)
+    elif "://" in target_url and not target_url.startswith("postgresql+pg8000://") and "postgresql" in target_url:
+        prefix = target_url.split("://")[0]
+        target_url = target_url.replace(prefix + "://", "postgresql+pg8000://", 1)
 
     connect_args = {}
     if "postgresql" in target_url:
         try:
             from sqlalchemy.engine.url import make_url
             url_obj = make_url(target_url)
+            db_status["host"] = url_obj.host
+            db_status["port"] = url_obj.port
+            db_status["user"] = url_obj.username
+            db_status["database"] = url_obj.database
+            db_status["masked_url"] = url_obj.render_as_string(hide_password=True)
+
             query_dict = dict(url_obj.query)
             # Remove parameters not accepted by pg8000.connect
             query_dict.pop("sslmode", None)
@@ -43,6 +57,7 @@ if raw_db_url:
             target_url = url_obj.set(query=query_dict).render_as_string(hide_password=False)
         except Exception as parse_err:
             print("URL query cleanup warning:", parse_err)
+            db_status["parse_warning"] = str(parse_err)
 
         try:
             # Supabase PostgreSQL requires SSL encryption
@@ -50,7 +65,7 @@ if raw_db_url:
             ssl_ctx.check_hostname = False
             ssl_ctx.verify_mode = ssl.CERT_NONE
             connect_args["ssl_context"] = ssl_ctx
-            connect_args["timeout"] = 5  # Fail fast to preserve Vercel execution window
+            connect_args["timeout"] = 10  # Connection timeout
         except Exception as ssl_err:
             print("SSL context setup warning:", ssl_err)
 

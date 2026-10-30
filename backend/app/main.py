@@ -151,6 +151,10 @@ def health_check():
         "database": db_status.get("type", "SQLite"),
         "db_connected": db_status.get("connected", False),
         "db_error": db_status.get("error"),
+        "db_host": db_status.get("host"),
+        "db_port": db_status.get("port"),
+        "db_user": db_status.get("user"),
+        "db_masked_url": db_status.get("masked_url"),
     }
 
 
