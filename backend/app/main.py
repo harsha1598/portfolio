@@ -13,7 +13,7 @@ from .auth import (
     hash_password,
     verify_password,
 )
-from .database import Base, engine, get_db
+from .database import Base, engine, get_db, SessionLocal
 from .models import (
     AdminUser,
     Award,
@@ -62,19 +62,22 @@ from .seed import populate_from_resume_payload, seed_database
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: create tables and seed default data
-    Base.metadata.create_all(bind=engine)
-    db = next(get_db())
+    # Startup: safely create tables and seed default data
     try:
-        seed_database(db)
-    finally:
-        db.close()
+        Base.metadata.create_all(bind=engine)
+        db = SessionLocal()
+        try:
+            seed_database(db)
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"Lifespan database initialization warning: {e}")
     yield
 
 
 app = FastAPI(
     title="Developer Portfolio & Blog API",
-    description="FastAPI + SQLite backend for personal portfolio and content management.",
+    description="FastAPI + PostgreSQL / SQLite backend for personal portfolio and content management.",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -95,25 +98,28 @@ app.add_middleware(
 
 @app.get("/")
 def root():
+    from .database import db_status
     return {
         "status": "healthy",
         "app": "Portfolio & Blog API",
-        "database": "SQLite (portfolio.db)",
+        "database": db_status.get("type", "SQLite"),
+        "db_connected": db_status.get("connected", False),
     }
 
 
-@app.get("/health")
 @app.get("/health")
 @app.get("/api/health")
 def health_check():
+    from .database import db_status
     return {
         "status": "healthy",
         "app": "Portfolio & Blog API",
-        "database": "SQLite (portfolio.db)",
+        "database": db_status.get("type", "SQLite"),
+        "db_connected": db_status.get("connected", False),
+        "db_error": db_status.get("error"),
     }
 
 
-@app.get("/portfolio", response_model=PortfolioFullData)
 @app.get("/portfolio", response_model=PortfolioFullData)
 @app.get("/api/portfolio", response_model=PortfolioFullData)
 def get_portfolio_data(db: Session = Depends(get_db)):

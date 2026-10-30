@@ -1,8 +1,11 @@
 import { defaultPortfolioData } from '../data/defaultData';
 
-const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
-const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://mmeddnoitjmoegurtafe.supabase.co').replace(/\/+$/, '');
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_NukIXDw7ZwWtuEqgFZK2hw_XKkmj_Ae';
+const API_BASE = (
+  import.meta.env.VITE_API_URL || 
+  (typeof window !== 'undefined' && window.location.hostname.includes('github.io') 
+    ? 'https://portfolio-lilac-theta-34.vercel.app' 
+    : '')
+).replace(/\/+$/, '');
 
 const LOCAL_STORAGE_KEY = 'harsha_portfolio_data';
 const LOCAL_MESSAGES_KEY = 'harsha_portfolio_messages';
@@ -28,55 +31,6 @@ export const saveLocalData = (data) => {
   }
 };
 
-// Direct Supabase REST fetcher (High performance, live across all devices)
-export async function fetchFromSupabase() {
-  const headers = {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-  };
-
-  try {
-    const [profRes, expRes, skillRes, eduRes, projRes, awardRes, certRes, postRes] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/profiles?select=*`, { headers }),
-      fetch(`${SUPABASE_URL}/rest/v1/experiences?select=*&order=display_order.asc`, { headers }),
-      fetch(`${SUPABASE_URL}/rest/v1/skills?select=*&order=display_order.asc`, { headers }),
-      fetch(`${SUPABASE_URL}/rest/v1/educations?select=*`, { headers }),
-      fetch(`${SUPABASE_URL}/rest/v1/projects?select=*&order=display_order.asc`, { headers }),
-      fetch(`${SUPABASE_URL}/rest/v1/awards?select=*&order=display_order.asc`, { headers }),
-      fetch(`${SUPABASE_URL}/rest/v1/certifications?select=*&order=display_order.asc`, { headers }),
-      fetch(`${SUPABASE_URL}/rest/v1/blog_posts?select=*&is_published=eq.true&order=created_at.desc`, { headers }),
-    ]);
-
-    if (profRes.ok) {
-      const profiles = await profRes.json();
-      if (profiles && profiles.length > 0) {
-        const experiences = expRes.ok ? await expRes.json() : [];
-        const skills = skillRes.ok ? await skillRes.json() : [];
-        const education = eduRes.ok ? await eduRes.json() : [];
-        const projects = projRes.ok ? await projRes.json() : [];
-        const awards = awardRes.ok ? await awardRes.json() : [];
-        const certifications = certRes.ok ? await certRes.json() : [];
-        const posts = postRes.ok ? await postRes.json() : [];
-
-        return {
-          profile: profiles[0],
-          experiences,
-          skills,
-          education,
-          projects,
-          awards,
-          certifications,
-          posts,
-          is_custom: true,
-        };
-      }
-    }
-  } catch (err) {
-    console.warn('Direct Supabase fetch error:', err);
-  }
-  return null;
-}
-
 // Smart fetcher that handles both /api/endpoint and /endpoint automatically
 async function smartFetch(subpath, options = {}) {
   const cleanPath = subpath.startsWith('/') ? subpath : `/${subpath}`;
@@ -84,7 +38,10 @@ async function smartFetch(subpath, options = {}) {
   // Try with /api prefix first
   try {
     const res = await fetch(`${API_BASE}/api${cleanPath}`, options);
-    if (res.ok) return res;
+    // If successful or client error other than 404, return response
+    if (res.ok || (res.status >= 400 && res.status < 500 && res.status !== 404)) {
+      return res;
+    }
   } catch {
     // Continue to fallback
   }
@@ -92,40 +49,28 @@ async function smartFetch(subpath, options = {}) {
   // Try direct route (e.g. on Vercel without /api prefix)
   try {
     const res = await fetch(`${API_BASE}${cleanPath}`, options);
-    if (res.ok) return res;
-  } catch {
-    // Continue
+    return res;
+  } catch (err) {
+    throw new Error(`Failed to reach ${subpath}: ${err.message}`);
   }
-
-  throw new Error(`Failed to reach ${subpath}`);
 }
 
 // Check if backend API is online
 export const checkApiHealth = async () => {
   try {
     const res = await smartFetch('/health', { method: 'GET' });
-    const data = await res.json();
-    return { online: true, data };
+    if (res && res.ok) {
+      const data = await res.json();
+      return { online: true, data };
+    }
   } catch {
     // API is offline or running static on GitHub Pages without live connection
   }
   return { online: false };
 };
 
-// Fetch Portfolio Data (Multi-tier: Supabase Cloud DB -> FastAPI Vercel -> Local Storage)
+// Fetch Portfolio Data (Primary: Vercel API -> Secondary: Local Storage Fallback)
 export const fetchPortfolioData = async () => {
-  // 1. First priority: Direct Supabase Cloud (Live, persistent on all devices, 0 cold starts)
-  try {
-    const sbData = await fetchFromSupabase();
-    if (sbData && sbData.profile && sbData.profile.name && sbData.profile.name !== 'Developer Portfolio') {
-      saveLocalData(sbData);
-      return { data: sbData, source: 'supabase' };
-    }
-  } catch (e) {
-    // Continue to next tier
-  }
-
-  // 2. Second priority: FastAPI Backend on Vercel
   const local = getLocalData();
   const isLocalCustom = Boolean(
     local && (
@@ -136,7 +81,7 @@ export const fetchPortfolioData = async () => {
 
   try {
     const res = await smartFetch('/portfolio');
-    if (res.ok) {
+    if (res && res.ok) {
       const remote = await res.json();
       
       const isRemoteSeed = !remote?.profile || 
@@ -157,52 +102,31 @@ export const fetchPortfolioData = async () => {
       saveLocalData(remote);
       return { data: remote, source: 'api' };
     }
-  } catch {
-    // API is offline or unreachable
+  } catch (err) {
+    console.warn('API fetch failed, falling back to local storage:', err);
   }
 
-  // 3. Third priority: Local storage copy
+  // Fallback: Local storage copy
   return { data: local, source: 'local' };
 };
 
-// Submit Contact Message (Dual-Mode: Direct Supabase + Backend + Local Fallback)
+// Submit Contact Message (Vercel API -> Local Storage Fallback)
 export const sendContactMessage = async (messageData) => {
-  // 1. Send directly to Supabase contact_messages table
-  try {
-    const sbRes = await fetch(`${SUPABASE_URL}/rest/v1/contact_messages`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        Prefer: 'return=minimal',
-      },
-      body: JSON.stringify({
-        name: messageData.name,
-        email: messageData.email,
-        subject: messageData.subject || '',
-        message: messageData.message,
-      }),
-    });
-    if (sbRes.ok) {
-      return {
-        status: 'success',
-        message: `Thank you ${messageData.name}! Your message has been received.`,
-      };
-    }
-  } catch {}
-
-  // 2. Fall back to backend /contact
+  // 1. Send via Vercel backend /contact API
   try {
     const res = await smartFetch('/contact', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(messageData),
     });
-    if (res.ok) return await res.json();
-  } catch {}
+    if (res && res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn('Backend /contact failed, saving locally:', err);
+  }
 
-  // 3. Save locally if offline
+  // 2. Save locally if offline
   try {
     const existing = JSON.parse(localStorage.getItem(LOCAL_MESSAGES_KEY) || '[]');
     const newMsg = {
@@ -574,31 +498,16 @@ export const importResumeJson = async (jsonPayload) => {
   return { success: true, data: updatedData, source: 'local' };
 };
 
-// Blog Posts API
+// Blog Posts API (Vercel API -> Local Storage Fallback)
 export const fetchBlogPosts = async () => {
   try {
-    const sbRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/blog_posts?select=*&is_published=eq.true&order=created_at.desc`,
-      {
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        },
-      }
-    );
-    if (sbRes.ok) {
-      const posts = await sbRes.json();
-      if (posts && posts.length > 0) return posts;
-    }
-  } catch {}
-
-  try {
     const res = await smartFetch('/posts');
-    if (res.ok) {
-      return await res.json();
+    if (res && res.ok) {
+      const posts = await res.json();
+      if (Array.isArray(posts)) return posts;
     }
-  } catch {
-    // Fall back to local posts
+  } catch (err) {
+    console.warn('Backend /posts fetch failed, using local posts:', err);
   }
   return getLocalData().posts || [];
 };
