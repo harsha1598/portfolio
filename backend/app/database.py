@@ -2,7 +2,9 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./portfolio.db")
+# On Vercel serverless, filesystem is read-only except /tmp
+default_db_url = "sqlite:////tmp/portfolio.db" if os.getenv("VERCEL") else "sqlite:///./portfolio.db"
+DATABASE_URL = os.getenv("DATABASE_URL", default_db_url)
 
 engine = create_engine(
     DATABASE_URL,
