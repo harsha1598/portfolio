@@ -196,32 +196,6 @@ class ContactMessageOut(ContactMessageCreate):
         from_attributes = True
 
 
-class PortfolioFullData(BaseModel):
-    profile: Optional[ProfileOut] = None
-    experiences: List[ExperienceOut] = []
-    projects: List[ProjectOut] = []
-    skills: List[SkillOut] = []
-    education: List[EducationOut] = []
-    awards: List[AwardOut] = []
-    certifications: List[CertificationOut] = []
-    posts: List[BlogPostOut] = []
-
-
-class AdminLogin(BaseModel):
-    username: str
-    password: str
-
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    username: str
-
-
-class PasswordChange(BaseModel):
-    current_password: str
-    new_password: str
-
 class BlogPostBase(BaseModel):
     title: str
     slug: str
@@ -253,3 +227,30 @@ class BlogPostOut(BlogPostBase):
 
     class Config:
         from_attributes = True
+
+
+class PortfolioFullData(BaseModel):
+    profile: Optional[ProfileOut] = None
+    experiences: List[ExperienceOut] = []
+    projects: List[ProjectOut] = []
+    skills: List[SkillOut] = []
+    education: List[EducationOut] = []
+    awards: List[AwardOut] = []
+    certifications: List[CertificationOut] = []
+    posts: List[BlogPostOut] = []
+
+
+class AdminLogin(BaseModel):
+    username: str
+    password: str
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    username: str
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
