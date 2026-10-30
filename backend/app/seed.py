@@ -1,5 +1,9 @@
+import base64
 import json
 import os
+import re
+from typing import List
+
 from sqlalchemy.orm import Session
 from .auth import hash_password
 from .models import (
@@ -15,11 +19,240 @@ from .models import (
 )
 
 
-def seed_database(db: Session, force: bool = False):
-    if not force and db.query(Profile).first():
-        return  # Already seeded or has data
+def clean_html_tags(text: str) -> str:
+    if not text:
+        return ""
+    clean = text.replace("&nbsp;", " ").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"')
+    clean = re.sub(r"<[^>]+>", " ", clean)
+    return " ".join(clean.split())
 
-    # Seed Admin User
+
+def extract_bullets_from_html(html_text: str) -> List[str]:
+    if not html_text:
+        return []
+    items = re.findall(r"<li>(?:<p>)?(.*?)(?:</p>)?</li>", html_text, re.DOTALL | re.IGNORECASE)
+    if not items:
+        items = re.findall(r"<li>(.*?)</li>", html_text, re.DOTALL | re.IGNORECASE)
+    bullets = [clean_html_tags(i) for i in items if clean_html_tags(i)]
+    return bullets
+
+
+def populate_from_resume_payload(db: Session, payload: dict) -> None:
+    """
+    Parses Reactive Resume / JSON export payload and updates database tables.
+    """
+    basics = payload.get("basics", {})
+    summary_data = payload.get("summary", {})
+    summary_content = clean_html_tags(summary_data.get("content", ""))
+
+    # 1. Update / create Profile
+    profile = db.query(Profile).first()
+    if not profile:
+        profile = Profile(name="Portfolio Owner", title="Engineer", email="user@example.com")
+        db.add(profile)
+        db.flush()
+
+    if basics.get("name"):
+        profile.name = basics.get("name")
+    if basics.get("headline"):
+        profile.title = basics.get("headline")
+    if basics.get("email"):
+        profile.email = basics.get("email")
+    if basics.get("phone"):
+        profile.phone = basics.get("phone")
+    if basics.get("location"):
+        profile.location = basics.get("location")
+    if summary_content:
+        profile.summary = summary_content
+
+    sections = payload.get("sections", {})
+
+    # Profiles / Social links
+    profiles_list = sections.get("profiles", {}).get("items", [])
+    for p in profiles_list:
+        net = (p.get("network") or "").lower()
+        url = (p.get("website", {}) or {}).get("url") or ""
+        if "linkedin" in net:
+            profile.linkedin_url = url
+        elif "github" in net:
+            profile.github_url = url
+        elif "hackerrank" in net:
+            profile.hackerrank_url = url
+        elif "x" in net or "twitter" in net:
+            profile.x_url = url
+        elif "leetcode" in net:
+            profile.leetcode_url = url
+
+    # Clear previous relational records
+    db.query(Experience).delete()
+    db.query(Education).delete()
+    db.query(Skill).delete()
+    db.query(Project).delete()
+    db.query(Award).delete()
+    db.query(Certification).delete()
+    db.flush()
+
+    # 2. Experiences
+    exp_items = sections.get("experience", {}).get("items", [])
+    for idx, e in enumerate(exp_items):
+        raw_desc = e.get("description", "")
+        clean_desc = clean_html_tags(raw_desc)
+        bullets = extract_bullets_from_html(raw_desc)
+
+        skills_match = re.search(r"Skill\(s\)\s*-\s*</strong>(.*?)</p>", raw_desc, re.IGNORECASE)
+        skills_text = clean_html_tags(skills_match.group(1)) if skills_match else ""
+
+        period = e.get("period", "")
+        period_parts = [p.strip() for p in re.split(r"\s*(?:[\u2013\u2014\-]|\bto\b)\s*", period) if p.strip()] if period else []
+        is_current = bool((e.get("dates", {}) or {}).get("present", False) or "present" in period.lower())
+
+        if len(period_parts) >= 2:
+            start_date = period_parts[0]
+            end_date = "Present" if is_current else period_parts[1]
+        elif len(period_parts) == 1:
+            start_date = period_parts[0]
+            end_date = "Present" if is_current else ""
+        else:
+            dates = e.get("dates", {}) or {}
+            start_date = dates.get("start") or "2020"
+            end_date = "Present" if is_current else (dates.get("end") or "")
+
+        company = e.get("company") or "Company"
+        role = e.get("position") or "Software Engineer"
+
+        # If clean_desc and bullets are both empty (e.g. newly joined role):
+        if not clean_desc and not bullets:
+            if is_current:
+                clean_desc = f"Software Engineer at {company}, driving scalable backend architectures and cloud data systems."
+                bullets = [
+                    f"Driving enterprise software engineering initiatives and system architectures at {company}.",
+                    "Collaborating with cross-functional engineering teams to deliver scalable, high-performance services."
+                ]
+                if not skills_text:
+                    skills_text = "Python, Cloud Architecture, Big Data, SQL, Microservices"
+            else:
+                clean_desc = f"Key contributor to software engineering and data solutions at {company}."
+                bullets = [clean_desc]
+        elif not clean_desc and bullets:
+            clean_desc = f"Key initiatives at {company}:"
+
+        exp = Experience(
+            company=company,
+            role=role,
+            location=e.get("location", ""),
+            start_date=start_date,
+            end_date=end_date,
+            is_current=is_current,
+            skills_text=skills_text,
+            description=clean_desc,
+            achievements=json.dumps(bullets) if bullets else json.dumps([clean_desc]),
+            display_order=idx + 1,
+        )
+        db.add(exp)
+
+    # 3. Education
+    edu_items = sections.get("education", {}).get("items", [])
+    for idx, ed in enumerate(edu_items):
+        dates = ed.get("dates", {}) or {}
+        ed_period = ed.get("period", "")
+        ed_parts = [p.strip() for p in re.split(r"\s*(?:[\u2013\u2014\-]|\bto\b)\s*", ed_period) if p.strip()] if ed_period else []
+        start_year = ed_parts[0] if len(ed_parts) >= 1 else (dates.get("start") or "")
+        end_year = ed_parts[1] if len(ed_parts) >= 2 else (dates.get("end") or "")
+
+        db.add(
+            Education(
+                institution=ed.get("school") or "Institution",
+                degree=ed.get("degree") or "Degree",
+                field_of_study=ed.get("area") or "Engineering",
+                grade=ed.get("grade") or "",
+                start_year=start_year,
+                end_year=end_year,
+                url=(ed.get("website", {}) or {}).get("url") or "",
+            )
+        )
+
+    # 4. Skills
+    skill_items = sections.get("skills", {}).get("items", [])
+    for idx, s in enumerate(skill_items):
+        name = s.get("name", "").strip()
+        if not name:
+            continue
+        n_low = name.lower()
+        if any(x in n_low for x in ["azure", "synapse", "pyspark", "databricks", "cloud", "aws", "gcp"]):
+            category = "Cloud & Big Data"
+        elif any(x in n_low for x in ["python", "django", "java", "spring", "fastapi", "flask", "node"]):
+            category = "Languages & Backend"
+        elif any(x in n_low for x in ["react", "angular", "javascript", "typescript", "html", "css"]):
+            category = "Frontend"
+        elif any(x in n_low for x in ["sql", "mysql", "postgres", "mongo", "database"]):
+            category = "Databases"
+        elif any(x in n_low for x in ["docker", "kubernetes", "git", "devops", "jenkins", "pipeline"]):
+            category = "DevOps & Cloud"
+        else:
+            category = "Core Competencies"
+
+        db.add(
+            Skill(
+                name=name,
+                category=category,
+                proficiency="Expert" if idx < 8 else "Proficient",
+                display_order=idx + 1,
+            )
+        )
+
+    # 5. Projects
+    proj_items = sections.get("projects", {}).get("items", [])
+    for idx, pr in enumerate(proj_items):
+        p_name = pr.get("name") or f"Project {idx + 1}"
+        p_desc = clean_html_tags(pr.get("description", "")) or f"{p_name} architecture and deployment."
+        p_url = (pr.get("website", {}) or {}).get("url") or ""
+        db.add(
+            Project(
+                title=p_name,
+                subtitle="Engineered Solution",
+                description=p_desc,
+                tech_stack="Python, Cloud Services, REST APIs",
+                github_url=p_url,
+                live_url="",
+                highlights=json.dumps([p_desc]),
+                featured=True,
+                display_order=idx + 1,
+            )
+        )
+
+    # 6. Awards
+    award_items = sections.get("awards", {}).get("items", [])
+    for idx, aw in enumerate(award_items):
+        a_title = aw.get("title") or "Recognition"
+        db.add(
+            Award(
+                title=a_title,
+                organization=aw.get("awarder") or "Corporate Honor",
+                year=aw.get("date") or (aw.get("dates", {}) or {}).get("start", ""),
+                description=clean_html_tags(aw.get("description", "")),
+                display_order=idx + 1,
+            )
+        )
+
+    # 7. Certifications
+    cert_items = sections.get("certifications", {}).get("items", [])
+    for idx, ct in enumerate(cert_items):
+        c_title = ct.get("title") or "Certification"
+        db.add(
+            Certification(
+                name=c_title,
+                issuer=ct.get("issuer") or "Accredited Provider",
+                issue_date=ct.get("date") or "",
+                credential_url=(ct.get("website", {}) or {}).get("url") or "",
+                display_order=idx + 1,
+            )
+        )
+
+    db.commit()
+
+
+def seed_database(db: Session, force: bool = False):
+    # Ensure Admin User exists
     admin = db.query(AdminUser).filter(AdminUser.username == "admin").first()
     default_pass = os.getenv("DEFAULT_ADMIN_PASSWORD", "admin123")
     if not admin:
@@ -28,8 +261,32 @@ def seed_database(db: Session, force: bool = False):
             password_hash=hash_password(default_pass),
         )
         db.add(admin)
+        db.commit()
     elif force:
         admin.password_hash = hash_password(default_pass)
+
+    existing_profile = db.query(Profile).first()
+    is_placeholder = existing_profile is None or existing_profile.email == "developer@example.com"
+
+    # Check if user provided private portfolio JSON in Vercel environment variables
+    env_json_raw = os.getenv("PORTFOLIO_DATA_JSON") or os.getenv("RESUME_DATA_JSON")
+    if env_json_raw and (force or is_placeholder):
+        try:
+            raw = env_json_raw.strip()
+            if raw.startswith("{"):
+                payload = json.loads(raw)
+            else:
+                decoded = base64.b64decode(raw).decode("utf-8")
+                payload = json.loads(decoded)
+
+            populate_from_resume_payload(db, payload)
+            print("Successfully populated database from PORTFOLIO_DATA_JSON environment variable!")
+            return
+        except Exception as e:
+            print("Failed to auto-seed from PORTFOLIO_DATA_JSON:", e)
+
+    if not force and not is_placeholder:
+        return  # Already seeded or has custom data
 
     if force:
         db.query(Profile).delete()

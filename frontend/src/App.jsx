@@ -139,7 +139,11 @@ export default function App() {
       />
 
       {/* Floating AI Agent Chat Widget */}
-      <ChatWidget isOpen={isChatOpen} setIsOpen={setIsChatOpen} />
+      <ChatWidget
+        isOpen={isChatOpen}
+        setIsOpen={setIsChatOpen}
+        portfolioData={portfolioData}
+      />
 
       {/* Hidden Admin Modal (No routed URL directly in the frontend) */}
       <AdminModal

@@ -1,20 +1,55 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Bot, X, Send, Sparkles, Loader2, MessageSquare, ArrowRight } from 'lucide-react';
 import { sendChatMessage } from '../services/api';
 
-export default function ChatWidget({ isOpen: controlledIsOpen, setIsOpen: controlledSetIsOpen }) {
+export default function ChatWidget({
+  isOpen: controlledIsOpen,
+  setIsOpen: controlledSetIsOpen,
+  portfolioData,
+}) {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
   const setIsOpen = controlledSetIsOpen || setInternalIsOpen;
+
+  const profile = portfolioData?.profile || {};
+  const fullName = profile.name && profile.name !== 'Developer Portfolio' ? profile.name : '';
+  const firstName = fullName ? fullName.split(' ')[0] : 'the Developer';
+  const role = profile.title || 'Engineer';
+  const topCompany = portfolioData?.experiences?.[0]?.company || '';
+  const secondCompany = portfolioData?.experiences?.[1]?.company || '';
+  const topSkills = (portfolioData?.skills || []).slice(0, 3).map((s) => s.name);
+
+  // Dynamic Agent Title & Labels
+  const agentTitle = fullName ? `${firstName}'s AI Agent` : 'Portfolio AI Agent';
+  const buttonLabel = fullName ? `Ask ${firstName}'s Agent` : 'Ask AI Agent';
+
+  const defaultGreeting = useMemo(() => {
+    return fullName
+      ? `Hi! I'm ${firstName}'s personal AI Agent. Ask me anything about their engineering experience${
+          topCompany ? ` at ${topCompany}` : ''
+        }, cloud architectures, or technical skills!`
+      : "Hi! I'm the personal AI Agent. Ask me anything about engineering experience, cloud architectures, or technical skills!";
+  }, [fullName, firstName, topCompany]);
+
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      text: "Hi! I'm the personal AI Agent. Ask me anything about engineering experience, cloud architectures, or technical skills!",
+      text: defaultGreeting,
     },
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
+
+  // Dynamically update greeting when profile is imported if conversation has not started
+  useEffect(() => {
+    setMessages((prev) => {
+      if (prev.length === 1 && prev[0].role === 'assistant') {
+        return [{ role: 'assistant', text: defaultGreeting }];
+      }
+      return prev;
+    });
+  }, [defaultGreeting]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -51,11 +86,36 @@ export default function ChatWidget({ isOpen: controlledIsOpen, setIsOpen: contro
     }
   };
 
-  const starterPrompts = [
-    "Tell me about your experience",
-    "What is your core tech stack?",
-    "How can I get in touch?",
-  ];
+  // Dynamic starter prompts tailored to the imported resume
+  const starterPrompts = useMemo(() => {
+    if (fullName) {
+      const prompts = [];
+      if (topCompany) {
+        prompts.push(`Tell me about ${firstName}'s role at ${topCompany}`);
+      } else {
+        prompts.push(`Tell me about ${firstName}'s experience`);
+      }
+      if (topSkills.length > 0) {
+        prompts.push(`How does ${firstName} use ${topSkills.join(', ')}?`);
+      } else {
+        prompts.push(`What is ${firstName}'s core tech stack?`);
+      }
+      if (secondCompany) {
+        prompts.push(`What did ${firstName} achieve at ${secondCompany}?`);
+      } else if (portfolioData?.projects?.[0]?.title) {
+        prompts.push(`Tell me about the ${portfolioData.projects[0].title} project`);
+      } else {
+        prompts.push(`How can I get in touch with ${firstName}?`);
+      }
+      return prompts;
+    }
+
+    return [
+      "Tell me about your experience",
+      "What is your core tech stack?",
+      "How can I get in touch?",
+    ];
+  }, [fullName, firstName, topCompany, secondCompany, topSkills, portfolioData]);
 
   return (
     <div className="fixed bottom-6 right-6 z-50">
@@ -72,7 +132,7 @@ export default function ChatWidget({ isOpen: controlledIsOpen, setIsOpen: contro
           </span>
           <Bot className="w-5 h-5 text-emerald-400 group-hover:rotate-12 transition-transform" />
           <span className="text-xs font-mono font-bold text-slate-100 tracking-wide">
-            Ask AI Agent
+            {buttonLabel}
           </span>
         </button>
       )}
@@ -88,11 +148,11 @@ export default function ChatWidget({ isOpen: controlledIsOpen, setIsOpen: contro
               </div>
               <div>
                 <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
-                  Portfolio AI Agent
+                  {agentTitle}
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 </h3>
-                <p className="text-[10px] text-slate-400 font-mono">
-                  Powered by Gemini & FastAPI
+                <p className="text-[10px] text-slate-400 font-mono truncate max-w-[200px]">
+                  {fullName ? `${role} • AI Agent` : 'Powered by Gemini & FastAPI'}
                 </p>
               </div>
             </div>
@@ -164,7 +224,7 @@ export default function ChatWidget({ isOpen: controlledIsOpen, setIsOpen: contro
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask a question..."
+              placeholder={`Ask about ${firstName}...`}
               className="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 outline-none focus:border-emerald-500"
             />
             <button

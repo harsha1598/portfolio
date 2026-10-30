@@ -1316,6 +1316,42 @@ export default function AdminModal({
                       <span>Apply & Sync to Portfolio</span>
                     </button>
                   </div>
+
+                  {/* Persistent Cloud Sync Guide for All Devices & Mobile */}
+                  <div className="p-4 rounded-xl bg-slate-900/40 border border-cyan-500/20 space-y-3 mt-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-cyan-400 text-xs font-semibold">
+                        <Sparkles className="w-4 h-4" />
+                        <span>Make Visible on All Devices & Mobile (Persistent)</span>
+                      </div>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/50">
+                        Zero-Config
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Vercel Serverless containers are ephemeral and re-seed default data on container cold-starts. To make your imported resume permanent across <strong>all new devices, mobile phones, and recruiters</strong> without setting up an external database:
+                    </p>
+                    <ol className="list-decimal list-inside text-xs text-slate-400 space-y-1 font-mono">
+                      <li>Copy your resume JSON using the button below.</li>
+                      <li>Go to your <strong>Vercel Dashboard → Project Settings → Environment Variables</strong>.</li>
+                      <li>Add Key: <strong className="text-emerald-400">PORTFOLIO_DATA_JSON</strong> and paste the copied JSON.</li>
+                      <li>Click Save. All new devices and recruiters will permanently load your data!</li>
+                    </ol>
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const payload = jsonInput.trim() || JSON.stringify(dataCopy);
+                          navigator.clipboard.writeText(payload);
+                          alert('Copied resume data to clipboard! Paste it in Vercel Settings > Environment Variables as PORTFOLIO_DATA_JSON.');
+                        }}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-mono bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 transition-colors cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Copy JSON for Vercel Environment</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
 
