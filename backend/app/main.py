@@ -892,6 +892,30 @@ async def list_available_gemini_models():
             return {"error": str(e)}
 
 
+@app.get("/test-models")
+@app.get("/api/test-models")
+async def test_candidate_models():
+    raw_key = os.getenv("GEMINI_API_KEY", "")
+    api_key = raw_key.strip().strip('"').strip("'").strip()
+    headers = {"x-goog-api-key": api_key, "Content-Type": "application/json"}
+    payload = {"contents": [{"role": "user", "parts": [{"text": "Say hi in one word"}]}]}
+    results = {}
+    async with httpx.AsyncClient(timeout=8.0) as client:
+        for m in PREFERRED_FAST_MODELS:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={api_key}"
+            try:
+                t0 = time.time()
+                resp = await client.post(url, json=payload, headers=headers)
+                results[m] = {
+                    "status_code": resp.status_code,
+                    "elapsed": round(time.time() - t0, 2),
+                    "body": resp.json() if resp.status_code == 200 else resp.text[:200]
+                }
+            except Exception as e:
+                results[m] = {"error": str(e)}
+    return results
+
+
 @app.post("/chat")
 @app.post("/api/chat")
 async def chat_with_harsha_agent(req: ChatRequest, db: Session = Depends(get_db)):
