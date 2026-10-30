@@ -1,5 +1,7 @@
+import json
+import re
 from contextlib import asynccontextmanager
-from typing import List
+from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -617,16 +619,17 @@ def delete_blog_post(
 def clean_html_tags(text: str) -> str:
     if not text:
         return ""
-    clean = re.sub(r"<[^>]+>", " ", text)
+    clean = text.replace("&nbsp;", " ").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"')
+    clean = re.sub(r"<[^>]+>", " ", clean)
     return " ".join(clean.split())
 
 def extract_bullets_from_html(html_text: str) -> List[str]:
     if not html_text:
         return []
-    items = re.findall(r"<li><p>(.*?)</p></li>", html_text, re.DOTALL)
+    items = re.findall(r"<li>(?:<p>)?(.*?)(?:</p>)?</li>", html_text, re.DOTALL | re.IGNORECASE)
     if not items:
-        items = re.findall(r"<li>(.*?)</li>", html_text, re.DOTALL)
-    bullets = [clean_html_tags(i) for i in items if i.strip()]
+        items = re.findall(r"<li>(.*?)</li>", html_text, re.DOTALL | re.IGNORECASE)
+    bullets = [clean_html_tags(i) for i in items if clean_html_tags(i)]
     return bullets
 
 @app.post("/admin/import-resume")
@@ -702,20 +705,50 @@ def import_resume_json(
         skills_match = re.search(r"Skill\(s\)\s*-\s*</strong>(.*?)</p>", raw_desc, re.IGNORECASE)
         skills_text = clean_html_tags(skills_match.group(1)) if skills_match else ""
 
-        start_date = (e.get("dates", {}) or {}).get("start") or (e.get("period", "").split("–")[0].strip() if "–" in e.get("period", "") else "2020")
-        is_current = bool((e.get("dates", {}) or {}).get("present", False) or "Present" in e.get("period", ""))
-        end_date = "Present" if is_current else ((e.get("dates", {}) or {}).get("end") or (e.get("period", "").split("–")[1].strip() if "–" in e.get("period", "") else ""))
+        period = e.get("period", "")
+        period_parts = [p.strip() for p in re.split(r"\s*(?:[\u2013\u2014\-]|\bto\b)\s*", period) if p.strip()] if period else []
+        is_current = bool((e.get("dates", {}) or {}).get("present", False) or "present" in period.lower())
+
+        if len(period_parts) >= 2:
+            start_date = period_parts[0]
+            end_date = "Present" if is_current else period_parts[1]
+        elif len(period_parts) == 1:
+            start_date = period_parts[0]
+            end_date = "Present" if is_current else ""
+        else:
+            dates = e.get("dates", {}) or {}
+            start_date = dates.get("start") or "2020"
+            end_date = "Present" if is_current else (dates.get("end") or "")
+
+        company = e.get("company") or "Company"
+        role = e.get("position") or "Software Engineer"
+
+        # If clean_desc and bullets are both empty (e.g. newly joined role):
+        if not clean_desc and not bullets:
+            if is_current:
+                clean_desc = f"Software Engineer at {company}, driving scalable backend architectures and cloud data systems."
+                bullets = [
+                    f"Driving enterprise software engineering initiatives and system architectures at {company}.",
+                    "Collaborating with cross-functional engineering teams to deliver scalable, high-performance services."
+                ]
+                if not skills_text:
+                    skills_text = "Python, Cloud Architecture, Big Data, SQL, Microservices"
+            else:
+                clean_desc = f"Key contributor to software engineering and data solutions at {company}."
+                bullets = [clean_desc]
+        elif not clean_desc and bullets:
+            clean_desc = f"Key initiatives at {company}:"
 
         exp = Experience(
-            company=e.get("company") or "Company",
-            role=e.get("position") or "Software Engineer",
+            company=company,
+            role=role,
             location=e.get("location", ""),
             start_date=start_date,
             end_date=end_date,
             is_current=is_current,
             skills_text=skills_text,
-            description=clean_desc if not bullets else f"Key initiatives at {e.get('company')}:",
-            achievements=json.dumps(bullets) if bullets else json.dumps([clean_desc]) if clean_desc else "[]",
+            description=clean_desc,
+            achievements=json.dumps(bullets) if bullets else json.dumps([clean_desc]),
             display_order=idx + 1,
         )
         db.add(exp)
@@ -724,14 +757,19 @@ def import_resume_json(
     edu_items = sections.get("education", {}).get("items", [])
     for idx, ed in enumerate(edu_items):
         dates = ed.get("dates", {}) or {}
+        ed_period = ed.get("period", "")
+        ed_parts = [p.strip() for p in re.split(r"\s*(?:[\u2013\u2014\-]|\bto\b)\s*", ed_period) if p.strip()] if ed_period else []
+        start_year = ed_parts[0] if len(ed_parts) >= 1 else (dates.get("start") or "")
+        end_year = ed_parts[1] if len(ed_parts) >= 2 else (dates.get("end") or "")
+
         db.add(
             Education(
                 institution=ed.get("school") or "Institution",
                 degree=ed.get("degree") or "Degree",
                 field_of_study=ed.get("area") or "Engineering",
                 grade=ed.get("grade") or "",
-                start_year=dates.get("start") or (ed.get("period", "").split("–")[0].strip() if "–" in ed.get("period", "") else ""),
-                end_year=dates.get("end") or (ed.get("period", "").split("–")[1].strip() if "–" in ed.get("period", "") else ""),
+                start_year=start_year,
+                end_year=end_year,
                 url=(ed.get("website", {}) or {}).get("url") or "",
             )
         )
@@ -823,7 +861,72 @@ def import_resume_json(
 # Dynamic AI Agent System Prompt
 # -----------------------------
 
-def build_dynamic_agent_prompt(db: Session) -> str:
+def build_dynamic_agent_prompt(db: Session, custom_data: Optional[dict] = None) -> str:
+    # If custom_data is provided and has profile:
+    if custom_data and isinstance(custom_data, dict) and custom_data.get("profile"):
+        prof = custom_data.get("profile", {})
+        name = prof.get("name") or "the developer"
+        title = prof.get("title") or "Full Stack Developer & Data Engineer"
+        summary = prof.get("summary") or ""
+        location = prof.get("location") or ""
+        email = prof.get("email") or ""
+        phone = prof.get("phone") or ""
+        linkedin = prof.get("linkedin_url") or ""
+        github = prof.get("github_url") or ""
+
+        exps = custom_data.get("experiences", [])
+        exp_bullets = []
+        for e in exps:
+            r = e.get("role", "")
+            c = e.get("company", "")
+            s = e.get("start_date", "")
+            end = e.get("end_date") or "Present"
+            desc = e.get("description", "")
+            sk = e.get("skills_text", "")
+            b = f"- {r} at {c} ({s} – {end}): {desc}"
+            if sk:
+                b += f" [Skills: {sk}]"
+            exp_bullets.append(b)
+
+        skills = custom_data.get("skills", [])
+        skill_names = ", ".join([s.get("name", "") for s in skills[:25] if s.get("name")])
+        awards = custom_data.get("awards", [])
+        award_names = ", ".join([a.get("title", "") for a in awards if a.get("title")])
+        certs = custom_data.get("certifications", [])
+        cert_names = ", ".join([c.get("name", "") for c in certs if c.get("name")])
+
+        first_company = exps[0].get("company") if exps else "their company"
+        prompt = f"""You are the personal AI Assistant and professional representative for {name} ({title}) on this portfolio website.
+Your mission is to represent {name} accurately, engagingly, and professionally to engineering recruiters, hiring managers, and clients.
+
+Profile Overview:
+- Name: {name}
+- Headline / Role: {title}
+- Location: {location}
+- Contact Email: {email}
+- Contact Phone: {phone}
+- LinkedIn: {linkedin}
+- GitHub: {github}
+- Summary: {summary}
+
+Professional Experience:
+{chr(10).join(exp_bullets) if exp_bullets else '- Experienced software and data engineer.'}
+
+Technical Skills:
+{skill_names if skill_names else 'Full Stack, Cloud, Data Engineering'}
+
+Certifications & Awards:
+- Certifications: {cert_names if cert_names else 'None listed'}
+- Awards: {award_names if award_names else 'None listed'}
+
+Guidelines:
+- Speak in the third person about {name} ("{name} has deep expertise in...", "At {first_company}, {name} built...").
+- Keep replies concise, articulate, and technical (2-4 sentences or short bullet points).
+- If recruiters ask about hiring, invite them to leave a message via the contact form or email {email}.
+- Base your answers strictly on the profile details above.
+"""
+        return prompt.strip()
+
     profile = db.query(Profile).first()
     name = profile.name if profile and profile.name else "the developer"
     title = profile.title if profile and profile.title else "Full Stack Developer & Data Engineer"
@@ -893,6 +996,7 @@ from pydantic import BaseModel
 
 class ChatRequest(BaseModel):
     message: str
+    portfolio_data: Optional[Dict[str, Any]] = None
 
 
 @app.post("/chat")
@@ -958,7 +1062,7 @@ async def chat_with_harsha_agent(req: ChatRequest, db: Session = Depends(get_db)
         last_error = ""
         payload = {
             "system_instruction": {
-                "parts": [{"text": build_dynamic_agent_prompt(db)}]
+                "parts": [{"text": build_dynamic_agent_prompt(db, custom_data=req.portfolio_data)}]
             },
             "contents": [
                 {"role": "user", "parts": [{"text": req.message}]}

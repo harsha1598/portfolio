@@ -236,11 +236,19 @@ export default function AdminModal({
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
-        const imported = JSON.parse(event.target?.result);
-        setDataCopy(imported);
-        handleSaveAll(imported);
+        const text = event.target?.result;
+        const imported = JSON.parse(text);
+        if (imported.basics || imported.sections) {
+          // Reactive Resume JSON format!
+          await handleApplyResumeJson(text);
+        } else {
+          // Portfolio full backup format
+          imported.is_custom = true;
+          setDataCopy(imported);
+          await handleSaveAll(imported);
+        }
       } catch (err) {
         alert('Invalid JSON file format: ' + err.message);
       }

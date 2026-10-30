@@ -11,16 +11,16 @@ import Footer from './components/Footer';
 import AdminModal from './components/AdminModal';
 import ChatWidget from './components/ChatWidget';
 import Blog from './components/Blog';
-import { fetchPortfolioData, checkApiHealth } from './services/api';
+import { fetchPortfolioData, checkApiHealth, getLocalData } from './services/api';
 import { defaultPortfolioData } from './data/defaultData';
 
 export default function App() {
-  const [portfolioData, setPortfolioData] = useState(defaultPortfolioData);
+  const [portfolioData, setPortfolioData] = useState(() => getLocalData());
   const [isApiOnline, setIsApiOnline] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [currentView, setCurrentView] = useState('portfolio'); // 'portfolio' | 'blog'
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     async function init() {

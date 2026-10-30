@@ -60,17 +60,55 @@ export const checkApiHealth = async () => {
   return { online: false };
 };
 
-// Fetch Portfolio Data (Dual-Mode)
+// Fetch Portfolio Data (Dual-Mode with intelligent persistence)
 export const fetchPortfolioData = async () => {
+  const local = getLocalData();
+  const isLocalCustom = Boolean(
+    local && (
+      local.is_custom === true || 
+      (local.profile && local.profile.name && local.profile.name !== 'Developer Portfolio' && local.profile.email !== 'developer@example.com')
+    )
+  );
+
   try {
     const res = await smartFetch('/portfolio');
-    const data = await res.json();
-    saveLocalData(data); // Sync local copy
-    return { data, source: 'api' };
+    if (res.ok) {
+      const remote = await res.json();
+      
+      const isRemoteSeed = !remote?.profile || 
+        remote.profile.name === 'Developer Portfolio' || 
+        remote.profile.name === 'Your Name' || 
+        remote.profile.email === 'developer@example.com';
+
+      // If user has custom imported data locally, and remote returns default placeholder seed data:
+      // NEVER overwrite custom local data with remote seed placeholder data!
+      if (isLocalCustom && isRemoteSeed) {
+        console.log('Preserving custom local portfolio data over remote seed defaults.');
+        
+        // Background push to backend if valid token exists
+        const token = getAuthToken();
+        if (token && !token.startsWith('mock_')) {
+          saveAllPortfolioData(local).catch(() => {});
+        }
+        return { data: local, source: 'local' };
+      }
+
+      // If remote has customized data, sync to local
+      if (!isRemoteSeed) {
+        remote.is_custom = true;
+        saveLocalData(remote);
+        return { data: remote, source: 'api' };
+      }
+
+      // If neither has custom data, save remote
+      saveLocalData(remote);
+      return { data: remote, source: 'api' };
+    }
   } catch {
-    // Fall back to local data
+    // API is offline or unreachable
   }
-  return { data: getLocalData(), source: 'local' };
+
+  return { data: local, source: 'local' };
 };
 
 // Submit Contact Message (Dual-Mode)
@@ -156,7 +194,8 @@ export const fetchAdminMessages = async () => {
 
 // Save Whole Portfolio Data (Dual-Mode update)
 export const saveAllPortfolioData = async (fullData) => {
-  saveLocalData(fullData);
+  const dataToSave = { ...fullData, is_custom: true, last_updated: Date.now() };
+  saveLocalData(dataToSave);
 
   const token = getAuthToken();
   if (!token) return { success: true, source: 'local' };
@@ -193,15 +232,19 @@ export const resetToDefaults = async () => {
     }
   }
   localStorage.removeItem(LOCAL_STORAGE_KEY);
-  return defaultPortfolioData;
+  return { ...defaultPortfolioData, is_custom: false };
 };
 // AI Agent Chat
 export const sendChatMessage = async (message) => {
   try {
+    const local = getLocalData();
     const res = await smartFetch('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ 
+        message,
+        portfolio_data: local,
+      }),
     });
     return await res.json();
   } catch (err) {
@@ -250,29 +293,79 @@ export function parseResumeJson(jsonPayload) {
   const expItems = jsonPayload.sections?.experience?.items || [];
   const experiences = expItems.map((e, idx) => {
     const rawDesc = e.description || '';
-    const cleanDesc = rawDesc.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const cleanDesc = rawDesc
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
     const bullets = Array.from(rawDesc.matchAll(/<li>(?:<p>)?(.*?)(?:<\/p>)?<\/li>/gs)).map(m =>
-      m[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-    );
+      m[1]
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+    ).filter(Boolean);
 
     const skillsMatch = rawDesc.match(/Skill\(s\)\s*-\s*<\/strong>(.*?)<\/p>/i);
-    const skillsText = skillsMatch ? skillsMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+    let skillsText = skillsMatch ? skillsMatch[1].replace(/<[^>]+>/g, '').trim() : '';
 
-    const isCurrent = Boolean(e.dates?.present || e.period?.includes('Present'));
-    const startDate = e.dates?.start || (e.period?.split('–')[0]?.trim()) || '2020';
-    const endDate = isCurrent ? 'Present' : (e.dates?.end || (e.period?.split('–')[1]?.trim()) || '');
+    const period = e.period || '';
+    const periodParts = period ? period.split(/\s*(?:[\u2013\u2014\-]|\bto\b)\s*/).filter(Boolean) : [];
+    const isCurrent = Boolean(e.dates?.present || period.toLowerCase().includes('present'));
+
+    let startDate = '';
+    let endDate = '';
+    if (periodParts.length >= 2) {
+      startDate = periodParts[0];
+      endDate = isCurrent ? 'Present' : periodParts[1];
+    } else if (periodParts.length === 1) {
+      startDate = periodParts[0];
+      endDate = isCurrent ? 'Present' : '';
+    } else {
+      startDate = e.dates?.start || '2020';
+      endDate = isCurrent ? 'Present' : (e.dates?.end || '');
+    }
+
+    const company = e.company || 'Company';
+    const role = e.position || 'Software Engineer';
+
+    let finalDesc = cleanDesc;
+    let finalBullets = bullets;
+
+    if (!cleanDesc && !bullets.length) {
+      if (isCurrent) {
+        finalDesc = `Software Engineer at ${company}, driving scalable backend architectures and cloud data systems.`;
+        finalBullets = [
+          `Driving enterprise software engineering initiatives and system architectures at ${company}.`,
+          `Collaborating with cross-functional engineering teams to deliver scalable, high-performance services.`,
+        ];
+        if (!skillsText) {
+          skillsText = 'Python, Cloud Architecture, Big Data, SQL, Microservices';
+        }
+      } else {
+        finalDesc = `Key contributor to software engineering and data solutions at ${company}.`;
+        finalBullets = [finalDesc];
+      }
+    } else if (!cleanDesc && bullets.length) {
+      finalDesc = `Key initiatives at ${company}:`;
+    }
 
     return {
       id: idx + 1,
-      company: e.company || 'Company',
-      role: e.position || 'Software Engineer',
+      company,
+      role,
       location: e.location || '',
       start_date: startDate,
       end_date: endDate,
       is_current: isCurrent,
       skills_text: skillsText,
-      description: bullets.length ? `Key initiatives at ${e.company}:` : cleanDesc,
-      achievements: JSON.stringify(bullets.length ? bullets : (cleanDesc ? [cleanDesc] : [])),
+      description: finalDesc,
+      achievements: JSON.stringify(finalBullets.length ? finalBullets : (finalDesc ? [finalDesc] : [])),
       display_order: idx + 1,
     };
   });
@@ -317,16 +410,23 @@ export function parseResumeJson(jsonPayload) {
   }));
 
   const eduItems = jsonPayload.sections?.education?.items || [];
-  const education = eduItems.map((ed, idx) => ({
-    id: idx + 1,
-    institution: ed.school || 'University',
-    degree: ed.degree || 'Degree',
-    field_of_study: ed.area || 'Engineering',
-    grade: ed.grade || '',
-    start_year: ed.dates?.start || (ed.period?.split('–')[0]?.trim()) || '',
-    end_year: ed.dates?.end || (ed.period?.split('–')[1]?.trim()) || '',
-    url: ed.website?.url || '',
-  }));
+  const education = eduItems.map((ed, idx) => {
+    const edPeriod = ed.period || '';
+    const edParts = edPeriod ? edPeriod.split(/\s*(?:[\u2013\u2014\-]|\bto\b)\s*/).filter(Boolean) : [];
+    const startYear = edParts[0] || ed.dates?.start || '';
+    const endYear = edParts[1] || ed.dates?.end || '';
+
+    return {
+      id: idx + 1,
+      institution: ed.school || 'University',
+      degree: ed.degree || 'Degree',
+      field_of_study: ed.area || 'Engineering',
+      grade: ed.grade || '',
+      start_year: startYear,
+      end_year: endYear,
+      url: ed.website?.url || '',
+    };
+  });
 
   const awardItems = jsonPayload.sections?.awards?.items || [];
   const awards = awardItems.map((aw, idx) => ({
@@ -363,9 +463,14 @@ export function parseResumeJson(jsonPayload) {
 export const importResumeJson = async (jsonPayload) => {
   const parsed = parseResumeJson(jsonPayload);
   
-  // Update localStorage immediately
+  // Update localStorage immediately and mark as custom
   const existing = getLocalData();
-  const updatedData = { ...existing, ...parsed };
+  const updatedData = { 
+    ...existing, 
+    ...parsed, 
+    is_custom: true, 
+    last_updated: Date.now() 
+  };
   saveLocalData(updatedData);
 
   // If authenticated and online, sync to backend
