@@ -673,6 +673,7 @@ def import_resume_json(
     Wipes existing resume records and populates cleanly.
     """
     populate_from_resume_payload(db, payload)
+    invalidate_agent_prompt_cache()
     return {"status": "success", "message": "Resume JSON successfully imported and database updated!"}
 
 
@@ -806,10 +807,11 @@ Guidelines:
 
 
 # -----------------------------
-# AI Agent Endpoint
+# AI Agent Endpoint (Optimized for Sub-Second Latency)
 # -----------------------------
 
 import os
+import time
 import httpx
 from pydantic import BaseModel
 
@@ -817,10 +819,55 @@ class ChatRequest(BaseModel):
     message: str
     portfolio_data: Optional[Dict[str, Any]] = None
 
+# In-memory prompt cache to eliminate redundant DB queries on every turn
+_cached_prompt: Optional[str] = None
+_cached_prompt_time: float = 0.0
+
+def invalidate_agent_prompt_cache():
+    global _cached_prompt, _cached_prompt_time
+    _cached_prompt = None
+    _cached_prompt_time = 0.0
+
+def get_or_build_agent_prompt(db: Session, custom_data: Optional[Dict[str, Any]] = None) -> str:
+    global _cached_prompt, _cached_prompt_time
+    if custom_data and isinstance(custom_data, dict) and custom_data.get("profile"):
+        return build_dynamic_agent_prompt(db, custom_data=custom_data)
+    
+    now = time.time()
+    if _cached_prompt and (now - _cached_prompt_time < 300):
+        return _cached_prompt
+    
+    _cached_prompt = build_dynamic_agent_prompt(db, custom_data=None)
+    _cached_prompt_time = now
+    return _cached_prompt
+
+
+# Persistent client to reuse TLS connection across serverless warm invocations
+_gemini_client: Optional[httpx.AsyncClient] = None
+
+def get_gemini_client() -> httpx.AsyncClient:
+    global _gemini_client
+    if _gemini_client is None or _gemini_client.is_closed:
+        _gemini_client = httpx.AsyncClient(
+            timeout=10.0,
+            limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
+        )
+    return _gemini_client
+
+
+# Preferred ultra-fast production models in priority order.
+# Strictly avoids slow "thinking-exp" models which add 20-30s latency.
+PREFERRED_FAST_MODELS = [
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-8b",
+]
+
 
 @app.post("/chat")
 @app.post("/api/chat")
 async def chat_with_harsha_agent(req: ChatRequest, db: Session = Depends(get_db)):
+    t_start = time.time()
     raw_key = os.getenv("GEMINI_API_KEY", "")
     api_key = raw_key.strip().strip('"').strip("'").strip()
     if not api_key:
@@ -833,86 +880,74 @@ async def chat_with_harsha_agent(req: ChatRequest, db: Session = Depends(get_db)
         "Content-Type": "application/json"
     }
 
-    async with httpx.AsyncClient(timeout=25.0) as client:
-        # Step 1: Query Google ListModels to validate key and get supported models
-        list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
-        try:
-            list_resp = await client.get(list_url, headers=headers)
-            if list_resp.status_code != 200:
-                try:
-                    err_msg = list_resp.json().get("error", {}).get("message", list_resp.text)
-                except Exception:
-                    err_msg = list_resp.text
-                return {"reply": f"Gemini API authentication failed ({list_resp.status_code}): {err_msg}"}
+    system_prompt = get_or_build_agent_prompt(db, custom_data=req.portfolio_data)
 
+    payload = {
+        "system_instruction": {
+            "parts": [{"text": system_prompt}]
+        },
+        "contents": [
+            {"role": "user", "parts": [{"text": req.message}]}
+        ],
+        "generationConfig": {
+            "temperature": 0.3,
+            "maxOutputTokens": 350,
+        }
+    }
+
+    client = get_gemini_client()
+    last_error = ""
+
+    # Strategy 1: Try ultra-fast production models directly (no ListModels overhead)
+    for model_name in PREFERRED_FAST_MODELS:
+        gen_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+        try:
+            gen_resp = await client.post(gen_url, json=payload, headers=headers)
+            if gen_resp.status_code == 200:
+                data = gen_resp.json()
+                candidates = data.get("candidates", [])
+                if candidates and "content" in candidates[0]:
+                    text = candidates[0]["content"]["parts"][0]["text"]
+                    elapsed = round(time.time() - t_start, 2)
+                    return {"reply": text, "model": model_name, "latency_s": elapsed}
+                return {"reply": "Received empty response from Gemini."}
+
+            try:
+                err_msg = gen_resp.json().get("error", {}).get("message", gen_resp.text)
+            except Exception:
+                err_msg = gen_resp.text
+            last_error = f"{model_name}: {err_msg}"
+        except Exception as e:
+            last_error = f"{model_name}: {str(e)}"
+            continue
+
+    # Strategy 2: If none of the preferred models worked, fallback to ListModels
+    # But strictly filter OUT any thinking models (e.g. *-thinking-*)
+    try:
+        list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
+        list_resp = await client.get(list_url, headers=headers)
+        if list_resp.status_code == 200:
             models_data = list_resp.json().get("models", [])
             valid_models = [
                 m["name"] for m in models_data 
                 if "generateContent" in m.get("supportedGenerationMethods", [])
+                and "thinking" not in m.get("name", "").lower()
             ]
-        except Exception as e:
-            return {"reply": f"Unable to reach Google Gemini API: {str(e)}"}
-
-        if not valid_models:
-            return {"reply": "Your Gemini API key is valid, but no text generation models were found for this key."}
-
-        # Step 2: Order models by modern preference
-        def model_priority(m_name: str) -> int:
-            name_lower = m_name.lower()
-            if "gemini-3.8-flash" in name_lower:
-                return 0
-            if "gemini-3" in name_lower and "flash" in name_lower:
-                return 1
-            if "gemini-2.0-flash" in name_lower:
-                return 2
-            if "gemini-1.5-flash" in name_lower:
-                return 3
-            if "flash" in name_lower:
-                return 4
-            if "gemini-3" in name_lower:
-                return 5
-            if "gemini" in name_lower:
-                return 6
-            return 10
-
-        sorted_models = sorted(valid_models, key=model_priority)
-
-        # Step 3: Try models in sorted order until one succeeds
-        last_error = ""
-        payload = {
-            "system_instruction": {
-                "parts": [{"text": build_dynamic_agent_prompt(db, custom_data=req.portfolio_data)}]
-            },
-            "contents": [
-                {"role": "user", "parts": [{"text": req.message}]}
-            ],
-            "generationConfig": {
-                "temperature": 0.4,
-                "maxOutputTokens": 600
-            }
-        }
-
-        for model in sorted_models:
-            model_path = model if model.startswith("models/") else f"models/{model}"
-            gen_url = f"https://generativelanguage.googleapis.com/v1beta/{model_path}:generateContent?key={api_key}"
-            try:
-                gen_resp = await client.post(gen_url, json=payload, headers=headers)
-                if gen_resp.status_code == 200:
-                    data = gen_resp.json()
-                    candidates = data.get("candidates", [])
-                    if candidates and "content" in candidates[0]:
-                        text = candidates[0]["content"]["parts"][0]["text"]
-                        return {"reply": text}
-                    return {"reply": "Received empty response from Gemini."}
-
+            for model_path in valid_models:
+                clean_path = model_path if model_path.startswith("models/") else f"models/{model_path}"
+                gen_url = f"https://generativelanguage.googleapis.com/v1beta/{clean_path}:generateContent?key={api_key}"
                 try:
-                    err_msg = gen_resp.json().get("error", {}).get("message", gen_resp.text)
+                    gen_resp = await client.post(gen_url, json=payload, headers=headers)
+                    if gen_resp.status_code == 200:
+                        data = gen_resp.json()
+                        candidates = data.get("candidates", [])
+                        if candidates and "content" in candidates[0]:
+                            text = candidates[0]["content"]["parts"][0]["text"]
+                            elapsed = round(time.time() - t_start, 2)
+                            return {"reply": text, "model": clean_path, "latency_s": elapsed}
                 except Exception:
-                    err_msg = gen_resp.text
-                last_error = f"{model_path}: {err_msg}"
-                continue
-            except Exception as e:
-                last_error = f"{model_path}: {str(e)}"
-                continue
+                    continue
+    except Exception as e:
+        last_error = str(e)
 
-        return {"reply": f"Could not generate reply ({last_error})."}
+    return {"reply": f"Could not generate reply ({last_error})."}
