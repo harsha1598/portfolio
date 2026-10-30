@@ -69,29 +69,81 @@ if raw_db_url:
         except Exception as ssl_err:
             print("SSL context setup warning:", ssl_err)
 
-    try:
-        test_engine = create_engine(
-            target_url,
-            connect_args=connect_args,
-            pool_pre_ping=True,
-            pool_recycle=300,
-        )
-        # Test connection immediately to verify credentials and connectivity
-        with test_engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
+    # Supabase allocates projects across pooler clusters (aws-0, aws-1) and offers
+    # both transaction mode (:6543) and session mode (:5432).
+    # Prepare smart candidate variations if connecting to the shared pooler.
+    candidate_urls = [target_url]
+    if "aws-0-" in target_url:
+        candidate_urls.append(target_url.replace("aws-0-", "aws-1-"))
+    elif "aws-1-" in target_url:
+        candidate_urls.append(target_url.replace("aws-1-", "aws-0-"))
 
-        engine = test_engine
-        db_status["type"] = "PostgreSQL (Supabase)"
-        db_status["connected"] = True
-        db_status["error"] = None
-        db_status["driver"] = "pg8000"
-        print("Connected to PostgreSQL (Supabase) successfully!")
-    except Exception as e:
-        error_msg = str(e)
-        print(f"Warning: Failed to connect to DATABASE_URL: {error_msg}. Falling back to SQLite.")
+    # Also prepare session mode (:5432) alternatives if transaction mode (:6543) was given
+    url_variations = []
+    for c_url in candidate_urls:
+        if c_url not in url_variations:
+            url_variations.append(c_url)
+        if ":6543/" in c_url:
+            alt = c_url.replace(":6543/", ":5432/")
+            if alt not in url_variations:
+                url_variations.append(alt)
+        elif ":5432/" in c_url and "pooler.supabase.com" in c_url:
+            alt = c_url.replace(":5432/", ":6543/")
+            if alt not in url_variations:
+                url_variations.append(alt)
+
+    db_status["attempts"] = []
+    connected = False
+    last_error = None
+
+    for attempt_url in url_variations:
+        masked_attempt = attempt_url
+        try:
+            from sqlalchemy.engine.url import make_url
+            masked_attempt = make_url(attempt_url).render_as_string(hide_password=True)
+        except Exception:
+            pass
+
+        try:
+            test_engine = create_engine(
+                attempt_url,
+                connect_args=connect_args,
+                pool_pre_ping=True,
+                pool_recycle=300,
+            )
+            with test_engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+
+            engine = test_engine
+            db_status["type"] = "PostgreSQL (Supabase)"
+            db_status["connected"] = True
+            db_status["error"] = None
+            db_status["driver"] = "pg8000"
+            try:
+                from sqlalchemy.engine.url import make_url
+                u = make_url(attempt_url)
+                db_status["host"] = u.host
+                db_status["port"] = u.port
+                db_status["user"] = u.username
+                db_status["database"] = u.database
+                db_status["masked_url"] = masked_attempt
+            except Exception:
+                pass
+            db_status["attempts"].append({"url": masked_attempt, "status": "connected"})
+            connected = True
+            print(f"Connected to PostgreSQL ({masked_attempt}) successfully!")
+            break
+        except Exception as e:
+            last_error = str(e)
+            db_status["attempts"].append({"url": masked_attempt, "status": "failed", "error": last_error})
+            print(f"Connection attempt to {masked_attempt} failed: {last_error}")
+            continue
+
+    if not connected:
+        print(f"Warning: Failed to connect to DATABASE_URL: {last_error}. Falling back to SQLite.")
         db_status["type"] = "SQLite (Fallback)"
         db_status["connected"] = False
-        db_status["error"] = error_msg
+        db_status["error"] = last_error
         db_status["driver"] = "sqlite"
         engine = _create_sqlite_engine()
 else:
