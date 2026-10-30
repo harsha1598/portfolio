@@ -742,6 +742,7 @@ Certifications & Awards:
 Guidelines:
 - Speak in the third person about {name} ("{name} has deep expertise in...", "At {first_company}, {name} built...").
 - Keep replies concise, articulate, and technical (2-4 sentences or short bullet points).
+- Respond directly to the user's question without any introductory reasoning, thinking notes, or drafts.
 - If recruiters ask about hiring, invite them to leave a message via the contact form or email {email}.
 - Base your answers strictly on the profile details above.
 """
@@ -800,6 +801,7 @@ Certifications & Awards:
 Guidelines:
 - Speak in the third person about {name} ("{name} has deep expertise in...", "At {exps[0].company if exps else 'their company'}, {name} built...").
 - Keep replies concise, articulate, and technical (2-4 sentences or short bullet points).
+- Respond directly to the user's question without any introductory reasoning, thinking notes, or drafts.
 - If recruiters ask about hiring, invite them to leave a message via the contact form or email {email}.
 - Base your answers strictly on the profile details above.
 """
@@ -856,11 +858,15 @@ def get_gemini_client() -> httpx.AsyncClient:
 
 
 # Preferred ultra-fast production models in priority order.
-# Strictly avoids slow "thinking-exp" models which add 20-30s latency.
+# Mapped directly to available models for sub-second conversational latency.
 PREFERRED_FAST_MODELS = [
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-8b",
+    "gemini-2.5-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemini-2.5-flash",
+    "gemini-flash-latest",
+    "gemini-3.8-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash",
 ]
 
 
@@ -944,7 +950,6 @@ async def chat_with_harsha_agent(req: ChatRequest, db: Session = Depends(get_db)
             continue
 
     # Strategy 2: If none of the preferred models worked, fallback to ListModels
-    # But strictly filter OUT any thinking models (e.g. *-thinking-*)
     try:
         list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
         list_resp = await client.get(list_url, headers=headers)
@@ -954,7 +959,18 @@ async def chat_with_harsha_agent(req: ChatRequest, db: Session = Depends(get_db)
                 m["name"] for m in models_data 
                 if "generateContent" in m.get("supportedGenerationMethods", [])
                 and "thinking" not in m.get("name", "").lower()
+                and not m.get("name", "").startswith("models/gemma")
+                and not any(tag in m.get("name", "").lower() for tag in ["tts", "image", "transcribe", "robotics", "clip", "audio", "banana"])
             ]
+            def _sort_key(m_name: str) -> int:
+                nl = m_name.lower()
+                if "flash-lite" in nl:
+                    return 0
+                if "flash" in nl:
+                    return 1
+                return 2
+
+            valid_models.sort(key=_sort_key)
             for model_path in valid_models:
                 clean_path = model_path if model_path.startswith("models/") else f"models/{model_path}"
                 gen_url = f"https://generativelanguage.googleapis.com/v1beta/{clean_path}:generateContent?key={api_key}"
