@@ -3,7 +3,8 @@ import re
 from contextlib import asynccontextmanager
 from typing import Any, Dict, List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
@@ -90,6 +91,30 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def normalize_vercel_path(request: Request, call_next):
+    # Normalize paths when Vercel serverless passes /api/index.py or /index.py prefixes
+    path = request.scope.get("path", "")
+    for prefix in ["/api/index.py", "/index.py"]:
+        if path.startswith(prefix):
+            remainder = path[len(prefix):]
+            request.scope["path"] = remainder if remainder else "/"
+            break
+    return await call_next(request)
+
+
+@app.exception_handler(404)
+async def custom_404_handler(request: Request, exc):
+    return JSONResponse(
+        status_code=404,
+        content={
+            "detail": "Not Found",
+            "path": request.url.path,
+            "scope_path": request.scope.get("path"),
+        },
+    )
 
 
 # -----------------------------

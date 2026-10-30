@@ -24,4 +24,5 @@ except Exception as e:
     print("Database init on cold start:", e)
 
 # Vercel entrypoint
+app = app
 handler = app
