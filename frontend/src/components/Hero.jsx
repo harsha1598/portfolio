@@ -158,7 +158,7 @@ export default function Hero({
                 <div className="absolute inset-0 rounded-full border border-dashed border-cyan-400 animate-spin" />
                 <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
               </div>
-              <span className="font-mono tracking-wider">Initialize J.A.R.V.I.S.</span>
+              <span className="font-mono tracking-wider">Ask AI Agent</span>
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>

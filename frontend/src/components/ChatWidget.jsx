@@ -25,8 +25,8 @@ import {
 } from 'lucide-react';
 import { sendChatMessage } from '../services/api';
 
-// Native Web Audio API for futuristic J.A.R.V.I.S. HUD audio cues
-function playJarvisSound(type = 'chirp') {
+// Native Web Audio API for futuristic HUD audio cues
+function playHudSound(type = 'chirp') {
   try {
     if (typeof window === 'undefined') return;
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -40,7 +40,6 @@ function playJarvisSound(type = 'chirp') {
 
     const now = ctx.currentTime;
     if (type === 'open') {
-      // High-tech ascending HUD power-on chord
       osc.type = 'sine';
       osc.frequency.setValueAtTime(440, now);
       osc.frequency.exponentialRampToValueAtTime(880, now + 0.12);
@@ -49,7 +48,6 @@ function playJarvisSound(type = 'chirp') {
       osc.start(now);
       osc.stop(now + 0.18);
     } else if (type === 'send') {
-      // High-tech blip
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(659.25, now);
       osc.frequency.exponentialRampToValueAtTime(1318.5, now + 0.08);
@@ -86,10 +84,10 @@ export default function ChatWidget({
 
   const defaultGreeting = useMemo(() => {
     return fullName
-      ? `At your service. I am J.A.R.V.I.S., ${firstName}'s personal holographic intelligence interface. I maintain complete telemetry on ${firstName}'s system architectures${
+      ? `At your service. I am ${firstName}'s holographic intelligence copilot. I maintain complete telemetry on ${firstName}'s system architectures${
           topCompany ? `, cloud engineering at ${topCompany}` : ''
         }, and production milestones. Where shall we direct our attention?`
-      : "At your service. I am J.A.R.V.I.S., the holographic intelligence interface. Accessing engineering schematics and architectural telemetry. How may I assist?";
+      : "At your service. I am the portfolio holographic intelligence interface. Accessing engineering schematics and architectural telemetry. How may I assist?";
   }, [fullName, firstName, topCompany]);
 
   const [messages, setMessages] = useState([
@@ -103,16 +101,40 @@ export default function ChatWidget({
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
-  // Play HUD startup chime on open
+  // Play HUD startup chime on open & cancel TTS on close
   useEffect(() => {
     if (isOpen && soundEnabled) {
-      playJarvisSound('open');
+      playHudSound('open');
     }
     if (!isOpen && typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       setSpeakingIndex(null);
     }
   }, [isOpen, soundEnabled]);
+
+  // Lock body scroll on mobile when open to prevent background scrolling behind modal
+  useEffect(() => {
+    if (isOpen) {
+      const origOverflow = document.body.style.overflow;
+      if (window.innerWidth < 640) {
+        document.body.style.overflow = 'hidden';
+      }
+      return () => {
+        document.body.style.overflow = origOverflow;
+      };
+    }
+  }, [isOpen]);
+
+  // Keyboard Escape listener to close
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, setIsOpen]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -127,7 +149,7 @@ export default function ChatWidget({
   // Auto-Navigate to Component without requiring manual button clicks
   const autoNavigateToComponent = (target) => {
     if (!target) return;
-    if (soundEnabled) playJarvisSound('send');
+    if (soundEnabled) playHudSound('send');
 
     if (target === '#blog' || target === 'blog') {
       window.location.hash = '#blog';
@@ -199,7 +221,7 @@ export default function ChatWidget({
     return null;
   };
 
-  // Text-To-Speech with refined J.A.R.V.I.S. voice selection
+  // Text-To-Speech with refined natural voice selection
   const handleToggleSpeak = (text, index) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
 
@@ -217,19 +239,18 @@ export default function ChatWidget({
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
 
-    // Prioritize refined British or distinguished English voices (Daniel, UK English, etc.)
     const voices = window.speechSynthesis.getVoices();
-    const jarvisVoice =
+    const naturalVoice =
       voices.find((v) => v.name.includes('Daniel') || v.name.includes('George') || v.name.includes('Oliver')) ||
       voices.find((v) => v.lang.includes('en-GB')) ||
       voices.find((v) => v.lang.includes('en-US') && (v.name.includes('Natural') || v.name.includes('Male'))) ||
       voices[0];
 
-    if (jarvisVoice) {
-      utterance.voice = jarvisVoice;
+    if (naturalVoice) {
+      utterance.voice = naturalVoice;
     }
     utterance.rate = 1.02;
-    utterance.pitch = 0.95; // Slightly lower pitch for that calm J.A.R.V.I.S. delivery
+    utterance.pitch = 0.95;
 
     utterance.onend = () => setSpeakingIndex(null);
     utterance.onerror = () => setSpeakingIndex(null);
@@ -250,7 +271,7 @@ export default function ChatWidget({
       window.speechSynthesis.cancel();
     }
     setSpeakingIndex(null);
-    if (soundEnabled) playJarvisSound('open');
+    if (soundEnabled) playHudSound('open');
     setMessages([
       {
         role: 'assistant',
@@ -260,7 +281,7 @@ export default function ChatWidget({
     ]);
   };
 
-  // Render message with J.A.R.V.I.S. auto-navigation telemetry (no buttons needed)
+  // Render message with auto-navigation telemetry (no buttons needed)
   const renderMessageContent = (rawText, isUser, navTarget) => {
     if (isUser) {
       return <span>{rawText}</span>;
@@ -273,8 +294,8 @@ export default function ChatWidget({
         <div className="whitespace-pre-line leading-relaxed font-sans text-slate-200">{cleanText}</div>
 
         {navTarget && (
-          <div className="pt-2 border-t border-cyan-500/20 flex items-center gap-2 text-[10px] font-mono text-cyan-300">
-            <Crosshair className="w-3 h-3 text-cyan-400 animate-spin" />
+          <div className="pt-2 border-t border-cyan-500/20 flex items-center gap-2 text-[10px] font-mono text-cyan-400">
+            <Crosshair className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
             <span>AUTO-NAVIGATED DISPLAY // #{navTarget.toUpperCase()}</span>
           </div>
         )}
@@ -286,7 +307,7 @@ export default function ChatWidget({
     const text = messageText.trim();
     if (!text || loading) return;
 
-    if (soundEnabled) playJarvisSound('send');
+    if (soundEnabled) playHudSound('send');
     if (explicitTarget) {
       autoNavigateToComponent(explicitTarget);
     }
@@ -332,7 +353,7 @@ export default function ChatWidget({
     }
   };
 
-  // J.A.R.V.I.S. HUD Prompts
+  // Holographic Directives
   const modePrompts = useMemo(() => {
     if (activeMode === 'technical') {
       return [
@@ -369,14 +390,29 @@ export default function ChatWidget({
   }, [activeMode, firstName, topCompany, topProject]);
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 select-none">
+    <div
+      className={`fixed z-50 transition-all ${
+        isOpen
+          ? 'inset-0 sm:inset-auto sm:bottom-6 sm:right-6 flex flex-col justify-end sm:block'
+          : 'bottom-6 right-6'
+      }`}
+    >
+      {/* Mobile Backdrop Overlay - Click outside to close */}
+      {isOpen && (
+        <div
+          onClick={() => setIsOpen(false)}
+          className="fixed inset-0 bg-black/80 backdrop-blur-xs sm:hidden z-40 transition-opacity"
+          aria-hidden="true"
+        />
+      )}
+
       {/* ---------------------------------------------------- */}
-      {/* J.A.R.V.I.S. Holographic Arc Reactor Floating Button */}
+      {/* Holographic Arc Reactor Floating Launch Button       */}
       {/* ---------------------------------------------------- */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          aria-label="Initialize J.A.R.V.I.S. AI Interface"
+          aria-label="Open AI Copilot"
           className="relative group cursor-pointer flex items-center gap-3 p-2 pr-4 rounded-full bg-[#050811]/90 backdrop-blur-md border border-cyan-500/40 hover:border-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.35)] hover:shadow-[0_0_50px_rgba(6,182,212,0.6)] transition-all duration-300 hover:scale-105 active:scale-95"
         >
           {/* Arc Reactor Core Animation */}
@@ -391,28 +427,28 @@ export default function ChatWidget({
             </div>
           </div>
 
-          {/* J.A.R.V.I.S. HUD Label */}
+          {/* AI HUD Label */}
           <div className="flex flex-col text-left">
             <span className="text-xs font-mono font-bold text-cyan-300 tracking-widest flex items-center gap-1.5">
-              J.A.R.V.I.S.
+              {fullName ? `${firstName}'s AI` : 'AI COPILOT'}
               <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
             </span>
             <span className="text-[9px] font-mono text-cyan-500/90 tracking-wider uppercase">
-              {fullName ? `${firstName} // PROTOCOL` : 'AI PROTOCOL'}
+              NEURAL PROTOCOL
             </span>
           </div>
         </button>
       )}
 
       {/* ---------------------------------------------------- */}
-      {/* J.A.R.V.I.S. Holographic HUD Console Window           */}
+      {/* Holographic HUD Console Window                       */}
       {/* ---------------------------------------------------- */}
       {isOpen && (
         <div
-          className={`relative bg-[#050811]/95 backdrop-blur-2xl jarvis-hud-border rounded-2xl shadow-[0_0_60px_rgba(6,182,212,0.35)] flex flex-col overflow-hidden animate-fadeIn transition-all duration-300 text-slate-100 ${
+          className={`relative bg-[#050811]/98 backdrop-blur-2xl jarvis-hud-border rounded-t-2xl sm:rounded-2xl shadow-[0_0_60px_rgba(6,182,212,0.35)] flex flex-col overflow-hidden animate-fadeIn transition-all duration-300 text-slate-100 z-50 ${
             isExpanded
-              ? 'w-[94vw] sm:w-[680px] h-[720px] max-h-[90vh]'
-              : 'w-[92vw] sm:w-[430px] h-[580px] max-h-[85vh]'
+              ? 'w-full sm:w-[680px] h-[92dvh] sm:h-[720px] max-h-[92dvh] sm:max-h-[90vh]'
+              : 'w-full sm:w-[430px] h-[86dvh] sm:h-[580px] max-h-[88dvh] sm:max-h-[85vh]'
           }`}
         >
           {/* Futuristic HUD Corner Brackets */}
@@ -424,8 +460,17 @@ export default function ChatWidget({
           {/* Background Holographic Grid Scan */}
           <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none" />
 
+          {/* Mobile Pull-Down Handle */}
+          <div
+            onClick={() => setIsOpen(false)}
+            className="py-1.5 flex items-center justify-center sm:hidden shrink-0 cursor-pointer active:opacity-60 bg-[#070b16]"
+            title="Tap to close"
+          >
+            <div className="w-12 h-1 bg-cyan-500/40 rounded-full" />
+          </div>
+
           {/* Header Bar */}
-          <div className="px-4 py-3 bg-[#070b16]/90 border-b border-cyan-500/30 flex items-center justify-between shrink-0 relative z-10">
+          <div className="px-4 py-2.5 sm:py-3 bg-[#070b16]/95 border-b border-cyan-500/30 flex items-center justify-between shrink-0 relative z-10">
             <div className="flex items-center gap-3">
               {/* Mini Arc Reactor Visualizer */}
               <div className="relative w-8 h-8 flex items-center justify-center shrink-0">
@@ -438,13 +483,13 @@ export default function ChatWidget({
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-xs font-mono font-bold tracking-widest text-cyan-300 uppercase flex items-center gap-1.5">
-                    J.A.R.V.I.S.
+                    {fullName ? `${firstName}'s AI Agent` : 'AI NEURAL AGENT'}
                     <span className="text-[10px] text-cyan-400 font-normal px-1.5 py-0.2 rounded bg-cyan-950 border border-cyan-500/30">
-                      MK-IV
+                      HOLOGRAPHIC
                     </span>
                   </h3>
                 </div>
-                <p className="text-[9px] text-cyan-400/80 font-mono tracking-wider truncate max-w-[220px]">
+                <p className="text-[9px] text-cyan-400/80 font-mono tracking-wider truncate max-w-[200px] sm:max-w-[240px]">
                   {fullName ? `${fullName} // ARCHIVES` : 'NEURAL TELEMETRY // ONLINE'}
                 </p>
               </div>
@@ -454,7 +499,7 @@ export default function ChatWidget({
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setSoundEnabled(!soundEnabled)}
-                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer hidden sm:inline-flex ${
                   soundEnabled ? 'text-cyan-400 hover:bg-cyan-950/60' : 'text-slate-500 hover:text-slate-400'
                 }`}
                 title={soundEnabled ? 'HUD Audio: ON' : 'HUD Audio: OFF'}
@@ -465,30 +510,35 @@ export default function ChatWidget({
               <button
                 onClick={handleResetChat}
                 className="p-1.5 text-slate-400 hover:text-cyan-300 rounded-lg hover:bg-cyan-950/60 transition-colors cursor-pointer"
-                title="Re-initialize J.A.R.V.I.S. protocol"
+                title="Re-initialize protocol"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
               </button>
 
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="p-1.5 text-slate-400 hover:text-cyan-300 rounded-lg hover:bg-cyan-950/60 transition-colors cursor-pointer"
-                title={isExpanded ? 'Compact mode' : 'Expand holographic display'}
+                className="p-1.5 text-slate-400 hover:text-cyan-300 rounded-lg hover:bg-cyan-950/60 transition-colors cursor-pointer hidden sm:inline-flex"
+                title={isExpanded ? 'Compact mode' : 'Expand display'}
               >
                 {isExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
               </button>
 
+              {/* Large, prominent, easily tappable close button on both mobile and desktop */}
               <button
-                onClick={() => setIsOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-rose-950/40 transition-colors cursor-pointer"
-                title="Disengage J.A.R.V.I.S."
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsOpen(false);
+                }}
+                className="p-2 sm:p-1.5 text-slate-200 hover:text-white bg-slate-900/90 sm:bg-transparent hover:bg-rose-950/60 border border-slate-700/60 sm:border-0 rounded-xl min-w-[38px] min-h-[38px] flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95"
+                title="Close Agent"
+                aria-label="Close Agent"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4 text-slate-200" />
               </button>
             </div>
           </div>
 
-          {/* J.A.R.V.I.S. System Telemetry Bar */}
+          {/* System Telemetry Bar */}
           <div className="px-3 py-1.5 bg-[#03060f] border-b border-cyan-500/20 flex items-center justify-between text-[9px] font-mono text-cyan-400/80 shrink-0">
             <span className="flex items-center gap-1.5">
               <Activity className="w-3 h-3 text-cyan-400 animate-pulse" />
@@ -502,7 +552,7 @@ export default function ChatWidget({
             </span>
           </div>
 
-          {/* J.A.R.V.I.S. Holographic Protocol Selector */}
+          {/* Holographic Protocol Selector */}
           <div className="px-3 py-2 bg-[#050812]/90 border-b border-cyan-500/20 flex items-center gap-1.5 overflow-x-auto text-[10px] font-mono shrink-0 scrollbar-none">
             <span className="text-cyan-500/70 text-[9px] uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1">
               <Zap className="w-3 h-3 text-cyan-400" /> PROTOCOL:
@@ -564,7 +614,7 @@ export default function ChatWidget({
             </button>
           </div>
 
-          {/* Quick HUD Directive Shortcuts */}
+          {/* Quick Directive Shortcuts */}
           <div className="px-3 py-1.5 bg-[#03060f]/80 border-b border-cyan-500/20 flex items-center justify-between text-[9px] font-mono text-cyan-400/70 shrink-0">
             <span className="text-cyan-500/80">DIRECTIVES:</span>
             <div className="flex items-center gap-2">
@@ -603,7 +653,7 @@ export default function ChatWidget({
           </div>
 
           {/* Messages Scroll Area */}
-          <div className="flex-1 p-4 overflow-y-auto space-y-4 text-xs relative z-10">
+          <div className="flex-1 p-3.5 sm:p-4 overflow-y-auto space-y-4 text-xs relative z-10">
             {messages.map((msg, i) => (
               <div
                 key={i}
@@ -612,17 +662,17 @@ export default function ChatWidget({
                 }`}
               >
                 <div
-                  className={`max-w-[88%] rounded-2xl p-4 leading-relaxed relative group ${
+                  className={`max-w-[90%] sm:max-w-[88%] rounded-2xl p-3.5 sm:p-4 leading-relaxed relative group ${
                     msg.role === 'user'
                       ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white font-medium rounded-br-xs shadow-md shadow-cyan-500/20'
                       : 'bg-[#090e1c]/90 border border-cyan-500/30 text-slate-200 rounded-bl-xs shadow-[0_0_20px_rgba(6,182,212,0.1)]'
                   }`}
                 >
-                  {/* Subtle top indicator for J.A.R.V.I.S. replies */}
+                  {/* Top transmission tag for AI replies */}
                   {msg.role === 'assistant' && (
                     <div className="flex items-center gap-1.5 text-[9px] font-mono text-cyan-400 tracking-wider uppercase mb-1.5 opacity-80">
                       <Disc className="w-3 h-3 text-cyan-400 animate-spin" />
-                      <span>J.A.R.V.I.S. INTEL // TRANSMISSION</span>
+                      <span>AI TELEMETRY // TRANSMISSION</span>
                     </div>
                   )}
 
@@ -643,13 +693,13 @@ export default function ChatWidget({
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {/* Audio Speech Protocol Button */}
+                        {/* Audio Voice Protocol Button */}
                         <button
                           onClick={() => handleToggleSpeak(msg.text, i)}
                           className={`p-1 rounded hover:bg-cyan-950/60 transition-colors cursor-pointer ${
                             speakingIndex === i ? 'text-cyan-300' : 'text-slate-400 hover:text-cyan-300'
                           }`}
-                          title={speakingIndex === i ? 'Halt Voice Protocol' : 'Engage Voice Protocol'}
+                          title={speakingIndex === i ? 'Halt Voice' : 'Read Aloud'}
                         >
                           {speakingIndex === i ? (
                             <div className="flex items-center gap-1 text-cyan-300">
@@ -689,11 +739,10 @@ export default function ChatWidget({
               </div>
             ))}
 
-            {/* Thinking / Computing Pulse */}
+            {/* Computing Pulse */}
             {loading && (
               <div className="flex justify-start">
                 <div className="bg-[#090e1c]/90 border border-cyan-500/40 rounded-2xl px-4 py-2.5 flex items-center gap-3 text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.2)]">
-                  {/* Spinning Arc Core */}
                   <div className="relative w-4 h-4 flex items-center justify-center">
                     <div className="absolute inset-0 rounded-full border border-dashed border-cyan-400 animate-jarvis-spin" />
                     <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
@@ -711,13 +760,13 @@ export default function ChatWidget({
             <div ref={messagesEndRef} />
           </div>
 
-          {/* J.A.R.V.I.S. Holographic Suggested Directives */}
+          {/* Holographic Suggested Directives */}
           <div className="px-3 py-2 bg-[#050812]/95 border-t border-cyan-500/30 shrink-0 relative z-10">
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-[9px] font-mono text-cyan-400 tracking-wider uppercase flex items-center gap-1.5">
                 <Sparkles className="w-3 h-3 text-cyan-400 animate-pulse" /> SUGGESTED DIRECTIVES
               </span>
-              <span className="text-[8px] font-mono text-cyan-600">TRANSMIT DIRECTIVE</span>
+              <span className="text-[8px] font-mono text-cyan-600">CLICK TO TRANSMIT</span>
             </div>
             <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto scrollbar-none">
               {modePrompts.map((p, idx) => (

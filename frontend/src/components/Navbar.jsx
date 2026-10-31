@@ -125,17 +125,17 @@ export default function Navbar({
               )}
             </div>
 
-            {/* J.A.R.V.I.S. HUD Button */}
+            {/* Holographic AI Agent Button */}
             <button
               onClick={onOpenChat}
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:border-cyan-400 transition-all cursor-pointer shadow-sm hover:shadow-[0_0_15px_rgba(6,182,212,0.35)]"
-              title="Initialize J.A.R.V.I.S. AI Interface"
+              title="Initialize AI Agent Interface"
             >
               <div className="relative w-3.5 h-3.5 flex items-center justify-center">
                 <div className="absolute inset-0 rounded-full border border-dashed border-cyan-400 animate-spin" />
                 <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
               </div>
-              <span>J.A.R.V.I.S.</span>
+              <span>AI Agent</span>
             </button>
 
             {/* Resume Button */}
@@ -199,7 +199,7 @@ export default function Navbar({
                   <div className="absolute inset-0 rounded-full border border-dashed border-cyan-400 animate-spin" />
                   <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
                 </div>
-                <span>J.A.R.V.I.S.</span>
+                <span>AI Agent</span>
               </button>
               <a
                 href="#contact"
