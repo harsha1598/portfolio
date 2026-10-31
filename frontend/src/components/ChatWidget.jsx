@@ -973,6 +973,203 @@ function FollowUpSuggestions({ suggestions = [], onSelect }) {
 // ---------------------------------------------------------------------------
 // Main Agent Component
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Iron Man Arc Reactor Core Animation (Initial Empty State)
+// ---------------------------------------------------------------------------
+function IronManArcReactor() {
+  const coils = useMemo(
+    () =>
+      Array.from({ length: 10 }).map((_, i) => {
+        const deg = i * 36;
+        return { i, deg };
+      }),
+    []
+  );
+
+  return (
+    <div className="relative flex items-center justify-center my-4 select-none group">
+      {/* Outer Cyan Plasma Glow Aura */}
+      <div className="absolute w-48 h-48 sm:w-56 sm:h-56 rounded-full bg-cyan-500/15 blur-3xl pointer-events-none animate-pulse" />
+
+      {/* Main Arc Reactor SVG Core */}
+      <div className="relative w-36 h-36 sm:w-44 sm:h-44 flex items-center justify-center animate-reactor-glow transition-transform duration-500 group-hover:scale-105">
+        <svg viewBox="0 0 200 200" className="w-full h-full overflow-visible">
+          <defs>
+            {/* High-Energy Fusion Plasma Gradient */}
+            <radialGradient id="arcPlasmaCore" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
+              <stop offset="35%" stopColor="#cffafe" stopOpacity="0.95" />
+              <stop offset="65%" stopColor="#06b6d4" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#083344" stopOpacity="0.2" />
+            </radialGradient>
+
+            {/* Glowing Metal Casing Gradient */}
+            <linearGradient id="arcCasingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#0f172a" />
+              <stop offset="50%" stopColor="#1e293b" />
+              <stop offset="100%" stopColor="#090d16" />
+            </linearGradient>
+
+            {/* Core Glow Filter */}
+            <filter id="arcGlowFilter" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="4" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+          </defs>
+
+          {/* Outer Metallic Ring Chassis */}
+          <circle
+            cx="100"
+            cy="100"
+            r="92"
+            fill="url(#arcCasingGrad)"
+            stroke="#0891b2"
+            strokeWidth="3"
+            strokeOpacity="0.75"
+          />
+
+          {/* Secondary Concentric Grooved Rim */}
+          <circle
+            cx="100"
+            cy="100"
+            r="85"
+            fill="none"
+            stroke="#164e63"
+            strokeWidth="1.5"
+            strokeDasharray="4 2"
+          />
+
+          {/* 10 Radial Copper Induction Coils around circumference */}
+          {coils.map(({ i, deg }) => (
+            <g key={i} transform={'rotate(' + deg + ' 100 100)'}>
+              {/* Metallic Coil Core */}
+              <rect
+                x="92"
+                y="10"
+                width="16"
+                height="16"
+                rx="2.5"
+                fill="#071927"
+                stroke="#06b6d4"
+                strokeWidth="1.2"
+              />
+              {/* Copper Wire Windings */}
+              <line x1="92" y1="14" x2="108" y2="14" stroke="#38bdf8" strokeWidth="1" strokeOpacity="0.85" />
+              <line x1="92" y1="18" x2="108" y2="18" stroke="#38bdf8" strokeWidth="1" strokeOpacity="0.85" />
+              <line x1="92" y1="22" x2="108" y2="22" stroke="#38bdf8" strokeWidth="1" strokeOpacity="0.85" />
+            </g>
+          ))}
+
+          {/* Outer Segmented Gear Ring (Clockwise Rotation) */}
+          <g className="animate-jarvis-spin origin-[100px_100px]">
+            <circle
+              cx="100"
+              cy="100"
+              r="69"
+              fill="none"
+              stroke="#06b6d4"
+              strokeWidth="2.5"
+              strokeDasharray="18 10"
+              strokeOpacity="0.9"
+            />
+            {/* North, South, East, West Sensor Dots */}
+            <circle cx="100" cy="31" r="2.5" fill="#a5f3fc" />
+            <circle cx="169" cy="100" r="2.5" fill="#a5f3fc" />
+            <circle cx="100" cy="169" r="2.5" fill="#a5f3fc" />
+            <circle cx="31" cy="100" r="2.5" fill="#a5f3fc" />
+          </g>
+
+          {/* Middle Dotted Tech Ring (Counter-Clockwise Rotation) */}
+          <g className="animate-jarvis-spin-reverse origin-[100px_100px]">
+            <circle
+              cx="100"
+              cy="100"
+              r="56"
+              fill="none"
+              stroke="#38bdf8"
+              strokeWidth="2"
+              strokeDasharray="8 6"
+              strokeOpacity="0.8"
+            />
+            <circle
+              cx="100"
+              cy="100"
+              r="47"
+              fill="none"
+              stroke="#0891b2"
+              strokeWidth="1"
+              strokeDasharray="3 3"
+              strokeOpacity="0.6"
+            />
+          </g>
+
+          {/* Inverted Palladium Core Triangle Bracket */}
+          <g className="origin-[100px_100px]">
+            {/* Triangular Aperture Ring */}
+            <circle
+              cx="100"
+              cy="100"
+              r="40"
+              fill="#030816"
+              stroke="#06b6d4"
+              strokeWidth="2.5"
+              filter="url(#arcGlowFilter)"
+            />
+
+            {/* Iconic Inverted Triangle */}
+            <polygon
+              points="100,68 128,116 72,116"
+              fill="none"
+              stroke="#38bdf8"
+              strokeWidth="2.5"
+              strokeLinejoin="round"
+              strokeOpacity="0.95"
+            />
+
+            {/* Inner Radiating Struts */}
+            <line x1="100" y1="100" x2="100" y2="68" stroke="#a5f3fc" strokeWidth="1.5" strokeOpacity="0.9" />
+            <line x1="100" y1="100" x2="128" y2="116" stroke="#a5f3fc" strokeWidth="1.5" strokeOpacity="0.9" />
+            <line x1="100" y1="100" x2="72" y2="116" stroke="#a5f3fc" strokeWidth="1.5" strokeOpacity="0.9" />
+          </g>
+
+          {/* Center Fusion Plasma Core Node (Pulsing) */}
+          <g className="animate-jarvis-pulse origin-[100px_100px]">
+            {/* Plasma Aura Disk */}
+            <circle
+              cx="100"
+              cy="100"
+              r="24"
+              fill="url(#arcPlasmaCore)"
+              filter="url(#arcGlowFilter)"
+            />
+
+            {/* Concentric Energy Filament */}
+            <circle
+              cx="100"
+              cy="100"
+              r="15"
+              fill="none"
+              stroke="#ffffff"
+              strokeWidth="1.5"
+              strokeOpacity="0.85"
+            />
+
+            {/* Pure Radiant White Center */}
+            <circle
+              cx="100"
+              cy="100"
+              r="8"
+              fill="#ffffff"
+              filter="drop-shadow(0 0 10px #ffffff)"
+            />
+          </g>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 export default function ChatWidget({
   profile = {},
   experiences = [],
@@ -1623,9 +1820,7 @@ export default function ChatWidget({
             <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 max-w-3xl mx-auto w-full animate-fadeIn">
               <div className="w-full space-y-6 text-center">
                 <div className="space-y-2">
-                  <div className="inline-flex p-3 rounded-2xl bg-cyan-950/60 border border-cyan-500/40 text-cyan-400 mb-2 shadow-[0_0_25px_rgba(6,182,212,0.25)]">
-                    <Sparkles className="w-6 h-6 animate-pulse" />
-                  </div>
+                  <IronManArcReactor />
                   <h2 className="text-2xl sm:text-3xl font-extrabold text-white font-mono tracking-tight">
                     {agentName}
                   </h2>
