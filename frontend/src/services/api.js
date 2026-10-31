@@ -462,17 +462,17 @@ export function parseResumeJson(jsonPayload) {
   const ai_insights = [
     {
       id: 1,
-      section_key: 'executive_summary',
-      title: 'AI Executive Overview',
-      subtitle: 'Synthesized Candidate Caliber & Leadership',
+      section_key: 'engineering_philosophy',
+      title: 'Engineering Philosophy & Focus',
+      subtitle: 'Architectural Principles & Software Craftsmanship',
       content: JSON.stringify({
-        title: 'AI Executive Overview',
-        subtitle: 'Synthesized Candidate Caliber & Leadership',
-        content: `${candName} is an accomplished ${candTitle} with proven engineering excellence across ${companyStr}. Known for architecting resilient distributed systems, modernizing cloud data infrastructure, and delivering robust full-lifecycle applications. Demonstrates high technical rigor from cloud backend systems to intuitive client interfaces.`,
-        highlights: [
-          `Enterprise track record across ${companyStr}`,
-          `Core production proficiency in ${skillStr}`,
-          'Proven focus on API latency reduction, query tuning, and system resiliency',
+        title: 'Engineering Philosophy & Focus',
+        subtitle: 'Architectural Principles & Software Craftsmanship',
+        content: `I focus on designing software systems that balance high throughput with resilient, maintainable architecture. Having built production platforms across ${companyStr}, I prioritize clean service boundaries, end-to-end data integrity, and deterministic latency over premature complexity. My goal is always to deliver performant systems that scale gracefully under real-world demand.`,
+        principles: [
+          'Pragmatic Architecture: Prioritizing clean service boundaries, observability, and simplicity over resume-driven complexity.',
+          `Latency & Performance Obsession: Profiling queries, caching critical paths, and tuning async event loops with ${skillStr}.`,
+          'End-to-End Ownership: Deep commitment from distributed cloud infrastructure and CI/CD automation to polished client experiences.',
         ],
       }),
       display_order: 1,
@@ -480,11 +480,11 @@ export function parseResumeJson(jsonPayload) {
     {
       id: 2,
       section_key: 'architecture_highlights',
-      title: 'Architectural Pillars & Technical Impact',
-      subtitle: 'Core Engineering Accomplishments & Scalability',
+      title: 'System Architecture & Production Milestones',
+      subtitle: 'Scalability, Distributed Pipelines & Low-Latency Performance',
       content: JSON.stringify({
-        title: 'Architectural Pillars & Technical Impact',
-        subtitle: 'Core Engineering Accomplishments & Scalability',
+        title: 'System Architecture & Production Milestones',
+        subtitle: 'Scalability, Distributed Pipelines & Low-Latency Performance',
         bullets: [
           `Architected high-throughput microservices and distributed data pipelines leveraging ${skillStr}.`,
           'Engineered resilient ETL ingestion workflows handling high-volume analytical records with sub-second performance.',
@@ -495,23 +495,26 @@ export function parseResumeJson(jsonPayload) {
     },
     {
       id: 3,
-      section_key: 'recruiter_fit',
-      title: 'Recruiter & Hiring Fast-Track',
-      subtitle: 'Target Roles & Production Readiness',
+      section_key: 'domain_expertise',
+      title: 'Domain Expertise & What I Build',
+      subtitle: 'Core Specializations & Technical Vision',
       content: JSON.stringify({
-        title: 'Recruiter & Hiring Fast-Track',
-        subtitle: 'Target Roles & Production Readiness',
-        ideal_roles: [
-          `Senior ${candTitle.split(',')[0].trim() || 'Software Engineer'}`,
-          'Lead Backend / Data Architect',
-          'Staff Systems Engineer',
+        title: 'Domain Expertise & What I Build',
+        subtitle: 'Core Specializations & Technical Vision',
+        mission: `Passionate about solving complex engineering bottlenecks, designing distributed data pipelines, and building scalable cloud-native architectures with ${skillStr}.`,
+        focus_areas: [
+          'High-Throughput Data Ingestion',
+          'Resilient Cloud Backends & Microservices',
+          'API Performance & Query Tuning',
+          'Modern Reactive Interfaces & Dashboards',
         ],
-        superpowers: [
-          'Full-Lifecycle Architecture',
-          'Data Engineering & Cloud Optimization',
-          'High-Velocity API Design',
+        technical_stack: topSkills.length ? topSkills : ['Python', 'FastAPI', 'PostgreSQL', 'Docker', 'Cloud', 'React'],
+        values: [
+          'Sub-second API Latency',
+          'Zero-Downtime Releases',
+          'Strict Type Safety & Clean Contracts',
+          'Data Integrity & Fault Tolerance',
         ],
-        recommendation: `Ideal for senior technical roles requiring deep competence in ${skillStr} and a strong record of delivering mission-critical enterprise systems.`,
       }),
       display_order: 3,
     },

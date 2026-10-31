@@ -901,43 +901,46 @@ def generate_fallback_ai_insights(name: str, title: str, summary: Optional[str],
     top_exps = experiences[:3]
     top_companies = [e.company for e in top_exps if e.company]
     top_skills = [s.name for s in skills[:8]]
-    company_str = ", ".join(top_companies) if top_companies else "leading enterprise engineering teams"
+    company_str = ", ".join(top_companies) if top_companies else "leading engineering teams"
     skill_str = ", ".join(top_skills[:5]) if top_skills else "Python, Cloud, & Distributed Microservices"
 
     return {
-        "executive_summary": {
-            "title": "AI Executive Overview",
-            "subtitle": "Synthesized Candidate Caliber & Leadership",
-            "content": f"{name} is an accomplished {title} with proven engineering excellence across {company_str}. Known for designing scalable distributed architectures, streamlining complex data workflows, and engineering robust microservices. Demonstrates strong end-to-end technical leadership from cloud infrastructure to client interfaces.",
-            "highlights": [
-                f"Extensive enterprise track record across {company_str}",
-                f"Core production proficiency in {skill_str}",
-                "Proven focus on API latency reduction, query tuning, and system resiliency",
+        "engineering_philosophy": {
+            "title": "Engineering Philosophy & Focus",
+            "subtitle": "Architectural Principles & Software Craftsmanship",
+            "content": f"I focus on designing software systems that balance high throughput with resilient, maintainable architecture. Having built production platforms across {company_str}, I prioritize clean service boundaries, end-to-end data integrity, and deterministic latency over premature complexity. My goal is always to deliver performant systems that scale gracefully under real-world demand.",
+            "principles": [
+                "Pragmatic Architecture: Prioritizing clean service boundaries, observability, and simplicity over resume-driven complexity.",
+                f"Latency & Performance Obsession: Profiling queries, caching critical paths, and tuning async event loops with {skill_str}.",
+                "End-to-End Ownership: Deep commitment from distributed cloud infrastructure and CI/CD automation to polished client experiences.",
             ],
         },
         "architecture_highlights": {
-            "title": "Architectural Pillars & Technical Impact",
-            "subtitle": "Core Engineering Accomplishments & Scalability",
+            "title": "System Architecture & Production Milestones",
+            "subtitle": "Scalability, Distributed Pipelines & Low-Latency Performance",
             "bullets": [
                 f"Architected high-throughput microservices and distributed data pipelines leveraging {skill_str}.",
                 "Engineered resilient ETL ingestion workflows handling high-volume analytical records with sub-second performance.",
                 "Championed cloud modernization, automated CI/CD deployment pipelines, and containerization best practices.",
             ],
         },
-        "recruiter_fit": {
-            "title": "Recruiter & Hiring Fast-Track",
-            "subtitle": "Target Roles & Production Readiness",
-            "ideal_roles": [
-                f"Senior {title.split(',')[0].strip() if ',' in title else title}",
-                "Lead Backend / Data Architect",
-                "Staff Software Engineer",
+        "domain_expertise": {
+            "title": "Domain Expertise & What I Build",
+            "subtitle": "Core Specializations & Technical Vision",
+            "mission": f"Passionate about solving complex engineering bottlenecks, designing distributed data pipelines, and building scalable cloud-native architectures with {skill_str}.",
+            "focus_areas": [
+                "High-Throughput Data Ingestion",
+                "Resilient Cloud Backends & Microservices",
+                "API Performance & Query Tuning",
+                "Modern Reactive Interfaces & Dashboards",
             ],
-            "superpowers": [
-                "Full-Lifecycle Architecture",
-                "Data Engineering & Cloud Optimization",
-                "High-Velocity API Design",
+            "technical_stack": top_skills[:6] if top_skills else ["Python", "FastAPI", "PostgreSQL", "Docker", "Cloud", "React"],
+            "values": [
+                "Sub-second API Latency",
+                "Zero-Downtime Releases",
+                "Strict Type Safety & Clean Contracts",
+                "Data Integrity & Fault Tolerance",
             ],
-            "recommendation": f"Ideal for senior technical roles requiring deep competence in {skill_str} and a strong record of delivering mission-critical enterprise systems.",
         },
     }
 
@@ -958,10 +961,11 @@ async def generate_and_save_ai_insights(db: Session, profile: Profile) -> list:
     skill_summary = ", ".join([s.name for s in skills[:25]])
     proj_summary = "; ".join([f"{p.title}: {p.description[:80]}" for p in projects[:3]])
 
-    prompt = f"""You are an elite Silicon Valley technical recruiter and executive engineering leader.
-Analyze this candidate's resume data and generate 3 structured sections in JSON format:
+    prompt = f"""You are an elite software architect and technical biographer.
+Analyze this software engineer's background and generate 3 structured sections for their personal developer portfolio website.
+The tone must be authentic, authoritative, personal, and focused on software craftsmanship, architectural philosophy, and engineering achievements (NOT a third-party recruiter or HR evaluation report).
 
-Candidate Profile:
+Engineer Profile:
 - Name: {name}
 - Title / Headline: {title}
 - Background Summary: {summary}
@@ -971,27 +975,32 @@ Candidate Profile:
 
 Return ONLY valid JSON matching this exact structure:
 {{
-  "executive_summary": {{
-    "title": "AI Executive Overview",
-    "subtitle": "Synthesized Candidate Caliber & Leadership",
-    "content": "A high-impact 3-4 sentence executive overview describing why this engineer is a top-tier asset, highlighting their technical mastery, system reliability focus, and cross-functional leadership.",
-    "highlights": ["Key strength 1", "Key strength 2", "Key strength 3"]
-  }},
-  "architecture_highlights": {{
-    "title": "Architectural Pillars & Technical Impact",
-    "subtitle": "Core Engineering Accomplishments & Scalability",
-    "bullets": [
-      "Key architectural achievement in backend/data/cloud systems with technical depth",
-      "Production triumph in API latency, pipeline throughput, or migration",
-      "System design leadership and engineering rigor"
+  "engineering_philosophy": {{
+    "title": "Engineering Philosophy & Focus",
+    "subtitle": "Architectural Principles & Software Craftsmanship",
+    "content": "A thoughtful 3-4 sentence narrative written for their personal developer website describing how they approach systems design, scale, code reliability, maintainability, and clean architecture.",
+    "principles": [
+      "Pragmatic architectural principle with technical depth",
+      "Performance and latency optimization principle",
+      "System resiliency or end-to-end engineering ownership principle"
     ]
   }},
-  "recruiter_fit": {{
-    "title": "Recruiter & Hiring Fast-Track",
-    "subtitle": "Target Roles & Production Readiness",
-    "ideal_roles": ["Role 1", "Role 2", "Role 3"],
-    "superpowers": ["Core superpower 1", "Core superpower 2", "Core superpower 3"],
-    "recommendation": "A punchy 1-2 sentence recommendation on why hiring teams should fast-track this candidate."
+  "architecture_highlights": {{
+    "title": "System Architecture & Production Milestones",
+    "subtitle": "Scalability, Distributed Pipelines & Low-Latency Performance",
+    "bullets": [
+      "Key technical triumph in distributed backends, data pipelines, or cloud systems",
+      "Production metric achievement in API latency reduction, throughput, or query tuning",
+      "Modernization, containerization, or automated deployment rigor"
+    ]
+  }},
+  "domain_expertise": {{
+    "title": "Domain Expertise & What I Build",
+    "subtitle": "Core Specializations & Technical Vision",
+    "mission": "A compelling 1-2 sentence statement summarizing what technical challenges excite them most and the kind of high-impact systems they love designing.",
+    "focus_areas": ["Key engineering discipline 1", "Key engineering discipline 2", "Key engineering discipline 3", "Key engineering discipline 4"],
+    "technical_stack": ["Primary framework or language 1", "Database or pipeline tool 2", "Cloud or infra tool 3", "Architecture pattern 4"],
+    "values": ["Sub-second API Latency", "Zero-Downtime Releases", "Strict Type Safety", "Data Integrity & Fault Tolerance"]
   }}
 }}"""
 
@@ -1034,35 +1043,38 @@ Return ONLY valid JSON matching this exact structure:
     db.flush()
 
     created_insights = []
-    exec_data = insights_data.get("executive_summary", {})
+    # 1. Philosophy
+    phil_data = insights_data.get("engineering_philosophy") or insights_data.get("executive_summary") or {}
     created_insights.append(
         AiInsight(
-            section_key="executive_summary",
-            title=exec_data.get("title", "AI Executive Overview"),
-            subtitle=exec_data.get("subtitle", "Synthesized Candidate Caliber"),
-            content=json.dumps(exec_data),
+            section_key="engineering_philosophy",
+            title=phil_data.get("title", "Engineering Philosophy & Focus"),
+            subtitle=phil_data.get("subtitle", "Architectural Principles & Software Craftsmanship"),
+            content=json.dumps(phil_data),
             display_order=1,
         )
     )
 
-    arch_data = insights_data.get("architecture_highlights", {})
+    # 2. Architecture
+    arch_data = insights_data.get("architecture_highlights") or {}
     created_insights.append(
         AiInsight(
             section_key="architecture_highlights",
-            title=arch_data.get("title", "Architectural Pillars & Technical Impact"),
-            subtitle=arch_data.get("subtitle", "Scalability Accomplishments"),
+            title=arch_data.get("title", "System Architecture & Production Milestones"),
+            subtitle=arch_data.get("subtitle", "Scalability, Distributed Pipelines & Low-Latency Performance"),
             content=json.dumps(arch_data),
             display_order=2,
         )
     )
 
-    fit_data = insights_data.get("recruiter_fit", {})
+    # 3. Domain Expertise
+    domain_data = insights_data.get("domain_expertise") or insights_data.get("recruiter_fit") or {}
     created_insights.append(
         AiInsight(
-            section_key="recruiter_fit",
-            title=fit_data.get("title", "Recruiter & Hiring Fast-Track"),
-            subtitle=fit_data.get("subtitle", "Target Roles & Production Readiness"),
-            content=json.dumps(fit_data),
+            section_key="domain_expertise",
+            title=domain_data.get("title", "Domain Expertise & What I Build"),
+            subtitle=domain_data.get("subtitle", "Core Specializations & Technical Vision"),
+            content=json.dumps(domain_data),
             display_order=3,
         )
     )

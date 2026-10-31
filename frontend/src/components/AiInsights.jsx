@@ -3,20 +3,21 @@ import {
   Sparkles,
   Cpu,
   Layers,
-  Target,
+  Compass,
   CheckCircle2,
   Copy,
   Check,
   Zap,
   BrainCircuit,
-  ArrowRight,
   TrendingUp,
   ShieldCheck,
   Bot,
+  Code2,
+  Terminal,
 } from 'lucide-react';
 
 export default function AiInsights({ aiInsights = [], profile, experiences = [], skills = [] }) {
-  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'executive' | 'architecture' | 'recruiter'
+  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'philosophy' | 'architecture' | 'domain'
   const [copied, setCopied] = useState(false);
 
   // Parse insights from database/API JSON strings or fallback synthesis
@@ -41,35 +42,36 @@ export default function AiInsights({ aiInsights = [], profile, experiences = [],
       });
     }
 
-    // Dynamic fallbacks if missing
     const name = profile?.name || 'Engineer';
-    const title = profile?.title || 'Senior Software Engineer';
     const topExp = experiences.slice(0, 3).map((e) => e.company).filter(Boolean);
-    const companyStr = topExp.length ? topExp.join(', ') : 'leading tech enterprises';
+    const companyStr = topExp.length ? topExp.join(', ') : 'leading engineering teams';
     const topSkills = skills.slice(0, 5).map((s) => s.name);
     const skillStr = topSkills.length ? topSkills.join(', ') : 'Distributed Systems, Python, Cloud Microservices';
 
-    const exec = map.executive_summary || {
-      title: 'AI Executive Overview',
-      subtitle: 'Synthesized Candidate Caliber & Leadership',
+    // 1. Philosophy & Focus
+    const rawPhil = map.engineering_philosophy || map.executive_summary;
+    const phil = rawPhil || {
+      title: 'Engineering Philosophy & Focus',
+      subtitle: 'Architectural Principles & Software Craftsmanship',
       data: {
-        title: 'AI Executive Overview',
-        subtitle: 'Synthesized Candidate Caliber & Leadership',
-        content: `${name} is an accomplished ${title} with proven engineering excellence across ${companyStr}. Known for architecting resilient distributed systems, modernizing cloud data infrastructure, and delivering robust full-lifecycle applications. Demonstrates high technical rigor from cloud backend systems to intuitive client interfaces.`,
-        highlights: [
-          `Enterprise track record across ${companyStr}`,
-          `Core production proficiency in ${skillStr}`,
-          'Proven focus on API latency reduction, query tuning, and system resiliency',
+        title: 'Engineering Philosophy & Focus',
+        subtitle: 'Architectural Principles & Software Craftsmanship',
+        content: `I focus on designing software systems that balance high throughput with resilient, maintainable architecture. Having built production platforms across ${companyStr}, I prioritize clean service boundaries, end-to-end data integrity, and deterministic latency over premature complexity. My goal is always to deliver performant systems that scale gracefully under real-world demand.`,
+        principles: [
+          'Pragmatic Architecture: Prioritizing clean service boundaries, observability, and simplicity over resume-driven complexity.',
+          `Latency & Performance Obsession: Profiling queries, caching critical paths, and tuning async event loops with ${skillStr}.`,
+          'End-to-End Ownership: Deep commitment from distributed cloud infrastructure and CI/CD automation to polished client experiences.',
         ],
       },
     };
 
+    // 2. Architecture Milestones
     const arch = map.architecture_highlights || {
-      title: 'Architectural Pillars & Technical Impact',
-      subtitle: 'Core Engineering Accomplishments & Scalability',
+      title: 'System Architecture & Production Milestones',
+      subtitle: 'Scalability, Distributed Pipelines & Low-Latency Performance',
       data: {
-        title: 'Architectural Pillars & Technical Impact',
-        subtitle: 'Core Engineering Accomplishments & Scalability',
+        title: 'System Architecture & Production Milestones',
+        subtitle: 'Scalability, Distributed Pipelines & Low-Latency Performance',
         bullets: [
           `Architected high-throughput microservices and distributed data pipelines leveraging ${skillStr}.`,
           'Engineered resilient ETL ingestion workflows handling high-volume analytical records with sub-second performance.',
@@ -78,33 +80,38 @@ export default function AiInsights({ aiInsights = [], profile, experiences = [],
       },
     };
 
-    const fit = map.recruiter_fit || {
-      title: 'Recruiter & Hiring Fast-Track',
-      subtitle: 'Target Roles & Production Readiness',
+    // 3. Domain Expertise
+    const rawDomain = map.domain_expertise || map.recruiter_fit;
+    const domain = rawDomain || {
+      title: 'Domain Expertise & What I Build',
+      subtitle: 'Core Specializations & Technical Vision',
       data: {
-        title: 'Recruiter & Hiring Fast-Track',
-        subtitle: 'Target Roles & Production Readiness',
-        ideal_roles: [
-          `Senior ${title.split(',')[0].trim() || 'Software Engineer'}`,
-          'Lead Backend / Data Architect',
-          'Staff Systems Engineer',
+        title: 'Domain Expertise & What I Build',
+        subtitle: 'Core Specializations & Technical Vision',
+        mission: `Passionate about solving complex engineering bottlenecks, designing distributed data pipelines, and building scalable cloud-native architectures with ${skillStr}.`,
+        focus_areas: [
+          'High-Throughput Data Ingestion',
+          'Resilient Cloud Backends & Microservices',
+          'API Performance & Query Tuning',
+          'Modern Reactive Interfaces & Dashboards',
         ],
-        superpowers: [
-          'Full-Lifecycle Architecture',
-          'Data Engineering & Cloud Optimization',
-          'High-Velocity API Design',
+        technical_stack: topSkills.length ? topSkills : ['Python', 'FastAPI', 'PostgreSQL', 'Docker', 'Cloud', 'React'],
+        values: [
+          'Sub-second API Latency',
+          'Zero-Downtime Releases',
+          'Strict Type Safety & Clean Contracts',
+          'Data Integrity & Fault Tolerance',
         ],
-        recommendation: `Ideal for senior technical roles requiring deep competence in ${skillStr} and a strong record of delivering mission-critical enterprise systems.`,
       },
     };
 
-    return { exec, arch, fit };
+    return { phil, arch, domain };
   }, [aiInsights, profile, experiences, skills]);
 
-  const { exec, arch, fit } = parsedData;
+  const { phil, arch, domain } = parsedData;
 
   const handleCopySummary = () => {
-    const textToCopy = `AI Executive Brief - ${profile?.name || 'Engineer'}\n\n${exec.data.content || ''}\n\nSuperpowers:\n- ${(fit.data.superpowers || []).join('\n- ')}\n\nRecommendation:\n${fit.data.recommendation || ''}`;
+    const textToCopy = `Engineering Overview - ${profile?.name || 'Engineer'}\n\n${phil.data.content || ''}\n\nMission:\n${domain.data.mission || ''}\n\nCore Focus:\n- ${(domain.data.focus_areas || []).join('\n- ')}`;
     navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
@@ -121,17 +128,17 @@ export default function AiInsights({ aiInsights = [], profile, experiences = [],
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-400 text-xs font-mono uppercase tracking-wider mb-4 shadow-sm shadow-purple-500/10">
               <Sparkles className="w-3.5 h-3.5 animate-pulse text-purple-400" />
-              <span>LLM Synthesized Intelligence</span>
+              <span>AI System Synthesis</span>
               <span className="text-slate-500">|</span>
               <span className="text-[11px] text-purple-300 font-semibold flex items-center gap-1">
                 <Bot className="w-3 h-3 inline" /> Gemini 3.5 Flash
               </span>
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-white flex items-center gap-3">
-              AI Executive & Architectural Insights
+              Engineering Philosophy & Highlights
             </h2>
             <p className="mt-3 text-sm sm:text-base text-slate-400 max-w-2xl font-light">
-              Deep evaluation generated directly from resume data using LLM reasoning. Highlighting candidate caliber, architectural scalability, and fast-track hiring readiness.
+              An AI-synthesized perspective on my architectural mindset, production engineering impact, and core domain specializations.
             </p>
           </div>
 
@@ -146,17 +153,17 @@ export default function AiInsights({ aiInsights = [], profile, experiences = [],
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                All Insights
+                All Highlights
               </button>
               <button
-                onClick={() => setActiveTab('executive')}
+                onClick={() => setActiveTab('philosophy')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  activeTab === 'executive'
+                  activeTab === 'philosophy'
                     ? 'bg-purple-600/30 text-purple-300 border border-purple-500/30 shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Executive
+                Philosophy
               </button>
               <button
                 onClick={() => setActiveTab('architecture')}
@@ -169,21 +176,21 @@ export default function AiInsights({ aiInsights = [], profile, experiences = [],
                 Architecture
               </button>
               <button
-                onClick={() => setActiveTab('recruiter')}
+                onClick={() => setActiveTab('domain')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  activeTab === 'recruiter'
+                  activeTab === 'domain'
                     ? 'bg-cyan-600/30 text-cyan-300 border border-cyan-500/30 shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Hiring Fast-Track
+                Domain Focus
               </button>
             </div>
 
             <button
               onClick={handleCopySummary}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-slate-700 text-xs font-mono text-slate-300 hover:text-white transition-all shadow-sm cursor-pointer"
-              title="Copy synthesized executive summary"
+              title="Copy engineering summary"
             >
               {copied ? (
                 <>
@@ -202,11 +209,11 @@ export default function AiInsights({ aiInsights = [], profile, experiences = [],
 
         {/* Dynamic Cards Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-          {/* Card 1: Executive Overview */}
-          {(activeTab === 'all' || activeTab === 'executive') && (
+          {/* Card 1: Engineering Philosophy */}
+          {(activeTab === 'all' || activeTab === 'philosophy') && (
             <div
               className={`rounded-2xl bg-[#0c1017]/90 border border-slate-800/80 p-6 sm:p-8 backdrop-blur-xl hover:border-purple-500/40 transition-all duration-300 flex flex-col justify-between group shadow-lg shadow-black/40 ${
-                activeTab === 'executive' ? 'lg:col-span-12' : 'lg:col-span-7'
+                activeTab === 'philosophy' ? 'lg:col-span-12' : 'lg:col-span-7'
               }`}
             >
               <div>
@@ -217,37 +224,37 @@ export default function AiInsights({ aiInsights = [], profile, experiences = [],
                     </div>
                     <div>
                       <h3 className="font-bold text-lg text-white">
-                        {exec.data.title || 'AI Executive Overview'}
+                        {phil.data.title || 'Engineering Philosophy & Focus'}
                       </h3>
                       <p className="text-xs text-purple-400 font-mono">
-                        {exec.data.subtitle || 'Synthesized Caliber & Impact'}
+                        {phil.data.subtitle || 'Architectural Principles & Software Craftsmanship'}
                       </p>
                     </div>
                   </div>
                   <span className="hidden sm:inline-flex text-[10px] font-mono px-2.5 py-1 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                    Confidence: 98%
+                    Craftsmanship
                   </span>
                 </div>
 
                 <div className="relative pl-4 border-l-2 border-purple-500/30 my-4 py-1">
                   <p className="text-slate-300 text-sm sm:text-base leading-relaxed font-light">
-                    {exec.data.content}
+                    {phil.data.content}
                   </p>
                 </div>
 
-                {exec.data.highlights && exec.data.highlights.length > 0 && (
+                {(phil.data.principles || phil.data.highlights) && (
                   <div className="mt-6 space-y-2.5">
                     <h4 className="text-xs font-mono uppercase tracking-wider text-slate-400">
-                      Core Candidate Signals
+                      Core Engineering Principles
                     </h4>
                     <div className="grid grid-cols-1 gap-2">
-                      {exec.data.highlights.map((h, i) => (
+                      {(phil.data.principles || phil.data.highlights).map((p, i) => (
                         <div
                           key={i}
                           className="flex items-start gap-2.5 p-2.5 rounded-xl bg-slate-900/50 border border-slate-800/60 text-xs text-slate-300"
                         >
                           <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
-                          <span>{h}</span>
+                          <span>{p}</span>
                         </div>
                       ))}
                     </div>
@@ -257,14 +264,14 @@ export default function AiInsights({ aiInsights = [], profile, experiences = [],
 
               <div className="mt-6 pt-4 border-t border-slate-800/60 flex items-center justify-between text-xs text-slate-400 font-mono">
                 <span className="flex items-center gap-1.5 text-purple-400">
-                  <Zap className="w-3.5 h-3.5" /> Executive Caliber
+                  <Zap className="w-3.5 h-3.5" /> Software Craftsmanship
                 </span>
-                <span>Structured Output JSON</span>
+                <span>High Resiliency & Scale</span>
               </div>
             </div>
           )}
 
-          {/* Card 2: Architectural Pillars & Scalability */}
+          {/* Card 2: System Architecture Milestones */}
           {(activeTab === 'all' || activeTab === 'architecture') && (
             <div
               className={`rounded-2xl bg-[#0c1017]/90 border border-slate-800/80 p-6 sm:p-8 backdrop-blur-xl hover:border-emerald-500/40 transition-all duration-300 flex flex-col justify-between group shadow-lg shadow-black/40 ${
@@ -278,10 +285,10 @@ export default function AiInsights({ aiInsights = [], profile, experiences = [],
                   </div>
                   <div>
                     <h3 className="font-bold text-lg text-white">
-                      {arch.data.title || 'Architectural Pillars'}
+                      {arch.data.title || 'System Architecture & Impact'}
                     </h3>
                     <p className="text-xs text-emerald-400 font-mono">
-                      {arch.data.subtitle || 'Production & Scalability'}
+                      {arch.data.subtitle || 'Production Scale & Pipelines'}
                     </p>
                   </div>
                 </div>
@@ -307,72 +314,99 @@ export default function AiInsights({ aiInsights = [], profile, experiences = [],
 
               <div className="mt-6 pt-4 border-t border-slate-800/60 flex items-center justify-between text-xs text-slate-400 font-mono">
                 <span className="flex items-center gap-1.5 text-emerald-400">
-                  <ShieldCheck className="w-3.5 h-3.5" /> High Resiliency
+                  <ShieldCheck className="w-3.5 h-3.5" /> Distributed Systems
                 </span>
-                <span>Latency & Throughput</span>
+                <span>Low-Latency Performance</span>
               </div>
             </div>
           )}
 
-          {/* Card 3: Recruiter Fast-Track & Role Fit */}
-          {(activeTab === 'all' || activeTab === 'recruiter') && (
+          {/* Card 3: Domain Expertise & What I Build */}
+          {(activeTab === 'all' || activeTab === 'domain') && (
             <div className="lg:col-span-12 rounded-2xl bg-gradient-to-br from-[#0c1017] via-slate-900/50 to-[#0c1017] border border-slate-800/80 p-6 sm:p-8 backdrop-blur-xl hover:border-cyan-500/40 transition-all duration-300 group shadow-lg shadow-black/40">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                 <div className="md:col-span-7 space-y-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 group-hover:scale-105 transition-transform">
-                      <Target className="w-5 h-5" />
+                      <Compass className="w-5 h-5" />
                     </div>
                     <div>
                       <h3 className="font-bold text-lg text-white">
-                        {fit.data.title || 'Recruiter & Hiring Fast-Track'}
+                        {domain.data.title || 'Domain Expertise & What I Build'}
                       </h3>
                       <p className="text-xs text-cyan-400 font-mono">
-                        {fit.data.subtitle || 'Target Roles & Production Readiness'}
+                        {domain.data.subtitle || 'Specialized Disciplines & Engineering Vision'}
                       </p>
                     </div>
                   </div>
 
-                  <div className="p-4 rounded-xl bg-cyan-500/5 border border-cyan-500/20 text-slate-200 text-sm leading-relaxed">
-                    <span className="text-cyan-400 font-semibold mr-1.5">Takeaway:</span>
-                    {fit.data.recommendation}
-                  </div>
+                  {domain.data.mission && (
+                    <div className="p-4 rounded-xl bg-cyan-500/5 border border-cyan-500/20 text-slate-200 text-sm leading-relaxed">
+                      <span className="text-cyan-400 font-semibold mr-1.5 font-mono text-xs uppercase tracking-wider block mb-1">
+                        Technical Vision & Focus
+                      </span>
+                      {domain.data.mission}
+                    </div>
+                  )}
 
-                  {/* Superpowers */}
+                  {/* Focus Areas */}
                   <div>
                     <h4 className="text-xs font-mono uppercase tracking-wider text-slate-400 mb-2">
-                      Core Technical Superpowers
+                      Primary Engineering Focus Areas
                     </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {(fit.data.superpowers || []).map((sp, idx) => (
-                        <span
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {(domain.data.focus_areas || domain.data.superpowers || []).map((area, idx) => (
+                        <div
                           key={idx}
-                          className="px-3 py-1 rounded-full text-xs font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 flex items-center gap-1.5"
+                          className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-900/60 border border-slate-800/80 text-xs text-slate-300"
                         >
-                          <TrendingUp className="w-3 h-3 text-cyan-400" />
-                          {sp}
-                        </span>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                          <span>{area}</span>
+                        </div>
                       ))}
                     </div>
                   </div>
                 </div>
 
-                <div className="md:col-span-5 bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-3">
-                  <h4 className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                    <Layers className="w-3.5 h-3.5 text-emerald-400" /> Recommended Target Roles
-                  </h4>
-                  <div className="space-y-2">
-                    {(fit.data.ideal_roles || []).map((role, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between p-2.5 rounded-lg bg-slate-900/60 border border-slate-800/70 text-xs font-medium text-slate-200"
-                      >
-                        <span>{role}</span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                          Immediate Match
+                <div className="md:col-span-5 bg-slate-950/70 p-5 rounded-xl border border-slate-800/80 space-y-4">
+                  {/* Core Technologies */}
+                  <div>
+                    <h4 className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-2.5">
+                      <Code2 className="w-3.5 h-3.5 text-emerald-400" /> Core Technologies & Tools
+                    </h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(domain.data.technical_stack || []).map((tech, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2.5 py-1 rounded-md text-xs font-mono bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"
+                        >
+                          {tech}
                         </span>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Engineering Values */}
+                  <div className="pt-2 border-t border-slate-800/80">
+                    <h4 className="text-xs font-mono uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mb-2.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" /> Architectural Values
+                    </h4>
+                    <div className="space-y-1.5">
+                      {(domain.data.values || [
+                        'Sub-second API Latency',
+                        'Zero-Downtime Releases',
+                        'Strict Type Safety & Clean Contracts',
+                        'Data Integrity & Fault Tolerance',
+                      ]).map((val, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between p-2 rounded-lg bg-slate-900/40 text-xs text-slate-300"
+                        >
+                          <span>{val}</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400/50" />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>

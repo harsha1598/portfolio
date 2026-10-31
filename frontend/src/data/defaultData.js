@@ -141,17 +141,17 @@ export const defaultPortfolioData = {
   ai_insights: [
     {
       id: 1,
-      section_key: "executive_summary",
-      title: "AI Executive Overview",
-      subtitle: "Synthesized Candidate Caliber & Leadership",
+      section_key: "engineering_philosophy",
+      title: "Engineering Philosophy & Focus",
+      subtitle: "Architectural Principles & Software Craftsmanship",
       content: JSON.stringify({
-        title: "AI Executive Overview",
-        subtitle: "Synthesized Candidate Caliber & Leadership",
-        content: "Accomplished software engineer with proven engineering excellence across distributed architectures, high-performance data workflows, and robust microservices. Demonstrates strong technical leadership from cloud infrastructure to client interfaces.",
-        highlights: [
-          "Enterprise track record across distributed systems and cloud platforms",
-          "Core production proficiency in Python, FastAPI, React, and cloud architectures",
-          "Proven focus on API latency reduction, query tuning, and system resiliency"
+        title: "Engineering Philosophy & Focus",
+        subtitle: "Architectural Principles & Software Craftsmanship",
+        content: "I believe in building software that balances high throughput with resilient, maintainable architecture. Rather than introducing premature complexity, I focus on clean service boundaries, end-to-end data integrity, and deterministic latency. Whether modernizing distributed data pipelines or engineering responsive microservices, my focus is on delivering reliable production systems that scale gracefully under real-world demand.",
+        principles: [
+          "Pragmatic Architecture: Prioritizing clean boundaries, observability, and simplicity over resume-driven complexity.",
+          "Latency & Performance Obsession: Profiling queries, caching critical paths, and tuning async event loops for sub-second responses.",
+          "End-to-End Ownership: Deep commitment from distributed cloud infrastructure and CI/CD automation to polished client experiences."
         ]
       }),
       display_order: 1,
@@ -159,30 +159,47 @@ export const defaultPortfolioData = {
     {
       id: 2,
       section_key: "architecture_highlights",
-      title: "Architectural Pillars & Technical Impact",
-      subtitle: "Core Engineering Accomplishments & Scalability",
+      title: "System Architecture & Production Milestones",
+      subtitle: "Scalability, Distributed Pipelines & Low-Latency Performance",
       content: JSON.stringify({
-        title: "Architectural Pillars & Technical Impact",
-        subtitle: "Core Engineering Accomplishments & Scalability",
+        title: "System Architecture & Production Milestones",
+        subtitle: "Scalability, Distributed Pipelines & Low-Latency Performance",
         bullets: [
-          "Architected high-throughput microservices and distributed data pipelines leveraging modern asynchronous frameworks.",
-          "Engineered resilient ETL ingestion workflows handling high-volume analytical records with sub-second performance.",
-          "Championed cloud modernization, automated CI/CD deployment pipelines, and containerization best practices."
+          "Architected distributed microservices and asynchronous backend workflows leveraging Python and FastAPI, significantly cutting API response latency.",
+          "Engineered resilient ETL ingestion pipelines handling high-volume analytical records with robust error handling and schema validation.",
+          "Championed cloud modernization, automated CI/CD deployment pipelines, containerization, and zero-downtime deployments."
         ]
       }),
       display_order: 2,
     },
     {
       id: 3,
-      section_key: "recruiter_fit",
-      title: "Recruiter & Hiring Fast-Track",
-      subtitle: "Target Roles & Production Readiness",
+      section_key: "domain_expertise",
+      title: "Domain Expertise & What I Build",
+      subtitle: "Core Specializations & Technical Vision",
       content: JSON.stringify({
-        title: "Recruiter & Hiring Fast-Track",
-        subtitle: "Target Roles & Production Readiness",
-        ideal_roles: ["Senior Software Engineer", "Lead Backend / Data Architect", "Staff Systems Engineer"],
-        superpowers: ["Full-Lifecycle Architecture", "Data Engineering & Cloud Optimization", "High-Velocity API Design"],
-        recommendation: "Ideal for senior technical roles requiring deep competence in high-scale systems and a strong record of delivering mission-critical enterprise platforms."
+        title: "Domain Expertise & What I Build",
+        subtitle: "Core Specializations & Technical Vision",
+        mission: "Passionate about solving complex engineering bottlenecks, designing distributed data pipelines, and building scalable cloud-native architectures that deliver high performance and exceptional reliability.",
+        focus_areas: [
+          "High-Throughput Data Ingestion",
+          "Resilient Cloud Backends & Microservices",
+          "API Performance & Query Tuning",
+          "Modern Reactive Interfaces & Dashboards"
+        ],
+        technical_stack: [
+          "Python / FastAPI / REST",
+          "Cloud & Container Orchestration",
+          "SQL & Database Query Tuning",
+          "Distributed Event Processing",
+          "React JS & Modern Web"
+        ],
+        values: [
+          "Sub-second API Latency",
+          "Zero-Downtime Releases",
+          "Strict Type Safety & Clean Contracts",
+          "Data Integrity & Fault Tolerance"
+        ]
       }),
       display_order: 3,
     },

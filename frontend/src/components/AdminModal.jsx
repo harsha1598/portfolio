@@ -1425,9 +1425,9 @@ export default function AdminModal({
                         <Sparkles className="w-4 h-4" />
                         <span>LLM-Generated Intelligence</span>
                       </div>
-                      <h3 className="font-bold text-lg text-white">AI Insights & Executive Summaries</h3>
+                      <h3 className="font-bold text-lg text-white">AI Engineering Philosophy & Highlights</h3>
                       <p className="text-xs text-slate-400 font-mono mt-0.5">
-                        Synthesized summaries, architectural impact, and recruiter takeaways generated via Gemini 3.5 Flash
+                        Synthesized engineering philosophy, architectural impact, and domain specializations generated via Gemini 3.5 Flash
                       </p>
                     </div>
 
