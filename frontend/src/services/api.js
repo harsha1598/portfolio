@@ -319,7 +319,7 @@ export function parseResumeJson(jsonPayload) {
     const net = (p.network || '').toLowerCase();
     const url = p.website?.url || '';
     if (net.includes('linkedin')) linkedin = url;
-    else if (net.includes('github')) github = url;
+    else if (net.includes('github')) github = url.replace('harsha1598', 'harsha-reddi1');
     else if (net.includes('hackerrank')) hackerrank = url;
     else if (net.includes('x') || net.includes('twitter')) x = url;
     else if (net.includes('leetcode')) leetcode = url;
@@ -400,13 +400,29 @@ export function parseResumeJson(jsonPayload) {
 
     if (!cleanDesc && !bullets.length) {
       if (isCurrent) {
-        finalDesc = `Software Engineer at ${company}, driving scalable backend architectures and cloud data systems.`;
-        finalBullets = [
-          `Driving enterprise software engineering initiatives and system architectures at ${company}.`,
-          `Collaborating with cross-functional engineering teams to deliver scalable, high-performance services.`,
-        ];
-        if (!skillsText) {
-          skillsText = 'Python, Cloud Architecture, Big Data, SQL, Microservices';
+        if (company.toLowerCase().includes('deloitte')) {
+          finalDesc = 'Architecting full-stack solutions, distributed data pipelines, and GenAI agent platforms for enterprise analytics.';
+          finalBullets = [
+            'Delivered full-stack and GenAI work across APIs, data pipelines, UI and LLM agents for a consumer-spend analytics platform.',
+            'Built over half of the platform’s domain-specialist tool-calling agents, plus a RAG agent over curated documentation and an MCP tool layer.',
+            'Designed grounded LLM generation with server-validated figures, cutting repeat response latency ~45x via hash-based caching.',
+            'Delivered reporting, retail-metrics, and scenario-planning APIs (FastAPI, PostgreSQL, BigQuery) with 97–100% test coverage.',
+            'Built geospatial analytics using HyperLogLog sketches for de-duplicated shopper counts, expanding capacity 10x.',
+            'Optimized PostgreSQL with query-plan-driven indexes, achieving 13x faster query performance.',
+            'Built a generative content pipeline turning anomaly detection into LLM-written articles with automated vision screening.',
+          ];
+          if (!skillsText) {
+            skillsText = 'Python, Typescript, FastAPI, LiteLLM, PostgreSQL, BigQuery, React JS, Gen AI, ArgoCD, KEDA';
+          }
+        } else {
+          finalDesc = `Software Engineer at ${company}, driving scalable backend architectures and cloud data systems.`;
+          finalBullets = [
+            `Driving enterprise software engineering initiatives and system architectures at ${company}.`,
+            `Collaborating with cross-functional engineering teams to deliver scalable, high-performance services.`,
+          ];
+          if (!skillsText) {
+            skillsText = 'Python, Cloud Architecture, Big Data, SQL, Microservices';
+          }
         }
       } else {
         finalDesc = `Key contributor to software engineering and data solutions at ${company}.`;

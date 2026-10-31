@@ -76,7 +76,7 @@ def populate_from_resume_payload(db: Session, payload: dict) -> None:
         if "linkedin" in net:
             profile.linkedin_url = url
         elif "github" in net:
-            profile.github_url = url
+            profile.github_url = url.replace("harsha1598", "harsha-reddi1")
         elif "hackerrank" in net:
             profile.hackerrank_url = url
         elif "x" in net or "twitter" in net:
@@ -132,13 +132,27 @@ def populate_from_resume_payload(db: Session, payload: dict) -> None:
         # If clean_desc and bullets are both empty (e.g. newly joined role):
         if not clean_desc and not bullets:
             if is_current:
-                clean_desc = f"Software Engineer at {company}, driving scalable backend architectures and cloud data systems."
-                bullets = [
-                    f"Driving enterprise software engineering initiatives and system architectures at {company}.",
-                    "Collaborating with cross-functional engineering teams to deliver scalable, high-performance services."
-                ]
-                if not skills_text:
-                    skills_text = "Python, Cloud Architecture, Big Data, SQL, Microservices"
+                if "deloitte" in company.lower():
+                    clean_desc = "Architecting full-stack solutions, distributed data pipelines, and GenAI agent platforms for enterprise analytics."
+                    bullets = [
+                        "Delivered full-stack and GenAI work across APIs, data pipelines, UI and LLM agents for a consumer-spend analytics platform.",
+                        "Built over half of the platform’s domain-specialist tool-calling agents, plus a RAG agent over curated documentation and an MCP tool layer.",
+                        "Designed grounded LLM generation with server-validated figures, cutting repeat response latency ~45x via hash-based caching.",
+                        "Delivered reporting, retail-metrics, and scenario-planning APIs (FastAPI, PostgreSQL, BigQuery) with 97–100% test coverage.",
+                        "Built geospatial analytics using HyperLogLog sketches for de-duplicated shopper counts, expanding capacity 10x.",
+                        "Optimized PostgreSQL with query-plan-driven indexes, achieving 13x faster query performance.",
+                        "Built a generative content pipeline turning anomaly detection into LLM-written articles with automated vision screening.",
+                    ]
+                    if not skills_text:
+                        skills_text = "Python, Typescript, FastAPI, LiteLLM, PostgreSQL, BigQuery, React JS, Gen AI, ArgoCD, KEDA"
+                else:
+                    clean_desc = f"Software Engineer at {company}, driving scalable backend architectures and cloud data systems."
+                    bullets = [
+                        f"Driving enterprise software engineering initiatives and system architectures at {company}.",
+                        "Collaborating with cross-functional engineering teams to deliver scalable, high-performance services."
+                    ]
+                    if not skills_text:
+                        skills_text = "Python, Cloud Architecture, Big Data, SQL, Microservices"
             else:
                 clean_desc = f"Key contributor to software engineering and data solutions at {company}."
                 bullets = [clean_desc]
