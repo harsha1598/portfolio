@@ -1,37 +1,38 @@
-import React, { useState } from 'react';
-import { Database, Server, Layout, Wrench, Sparkles } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Database, Server, Layout, Wrench, Sparkles, Terminal, Cpu } from 'lucide-react';
 
 export default function Skills({ skills }) {
   if (!skills || skills.length === 0) return null;
 
-  const categories = [
-    'All',
-    'Cloud & Big Data',
-    'Backend & Architecture',
-    'Frontend Development',
-    'DevOps & Tools',
-  ];
+  // Extract categories dynamically from uploaded skills data
+  const categories = useMemo(() => {
+    const rawCategories = skills.map((s) => s.category?.trim()).filter(Boolean);
+    const unique = Array.from(new Set(rawCategories));
+    return ['All', ...unique];
+  }, [skills]);
 
   const [activeCategory, setActiveCategory] = useState('All');
 
   const filteredSkills =
     activeCategory === 'All'
       ? skills
-      : skills.filter((s) => s.category === activeCategory);
+      : skills.filter((s) => s.category?.trim() === activeCategory);
 
-  const getCategoryIcon = (cat) => {
-    switch (cat) {
-      case 'Cloud & Big Data':
-        return <Database className="w-4 h-4 text-emerald-400" />;
-      case 'Backend & Architecture':
-        return <Server className="w-4 h-4 text-cyan-400" />;
-      case 'Frontend Development':
-        return <Layout className="w-4 h-4 text-blue-400" />;
-      case 'DevOps & Tools':
-        return <Wrench className="w-4 h-4 text-purple-400" />;
-      default:
-        return <Sparkles className="w-4 h-4 text-emerald-400" />;
+  const getCategoryIcon = (cat = '') => {
+    const c = cat.toLowerCase();
+    if (c.includes('data') || c.includes('synapse') || c.includes('sql') || c.includes('storage')) {
+      return <Database className="w-4 h-4 text-emerald-400" />;
     }
+    if (c.includes('backend') || c.includes('language') || c.includes('server') || c.includes('api')) {
+      return <Server className="w-4 h-4 text-cyan-400" />;
+    }
+    if (c.includes('front') || c.includes('ui') || c.includes('web') || c.includes('client') || c.includes('mobile')) {
+      return <Layout className="w-4 h-4 text-blue-400" />;
+    }
+    if (c.includes('devops') || c.includes('cloud') || c.includes('tool') || c.includes('infra') || c.includes('pipeline')) {
+      return <Wrench className="w-4 h-4 text-purple-400" />;
+    }
+    return <Sparkles className="w-4 h-4 text-emerald-400" />;
   };
 
   return (
@@ -49,15 +50,15 @@ export default function Skills({ skills }) {
             A comprehensive overview of production-tested frameworks, data systems, and cloud platforms.
           </p>
 
-          {/* Category Filter Tabs */}
+          {/* Dynamic Category Filter Tabs */}
           <div className="flex flex-wrap items-center justify-center gap-2 mt-8">
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                className={`px-4 py-2 rounded-xl text-xs font-mono transition-all duration-200 border ${
+                className={`px-4 py-2 rounded-xl text-xs font-mono transition-all duration-200 border cursor-pointer ${
                   activeCategory === cat
-                    ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/40 shadow-sm shadow-emerald-500/10'
+                    ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/40 shadow-sm shadow-emerald-500/10 font-bold'
                     : 'bg-slate-900/60 text-slate-400 border-slate-800/80 hover:text-white hover:border-slate-700'
                 }`}
               >

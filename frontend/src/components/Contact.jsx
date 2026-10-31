@@ -47,7 +47,7 @@ export default function Contact({ profile }) {
             Get In Touch
           </h2>
           <p className="mt-4 text-base text-slate-400">
-            Open to senior engineering roles, data architecture discussions, or collaboration on exciting tech projects.
+            Open to {profile?.title ? `${profile.title} roles` : 'engineering opportunities'}, architecture discussions, or collaboration on exciting tech projects.
           </p>
         </div>
 
@@ -100,7 +100,7 @@ export default function Contact({ profile }) {
                   <div>
                     <p className="text-[11px] font-mono text-slate-500">Location</p>
                     <p className="text-xs sm:text-sm font-semibold">
-                      {profile?.location || 'Hyderabad, India'}
+                      {profile?.location || 'Remote / Worldwide'}
                     </p>
                   </div>
                 </div>
@@ -109,7 +109,7 @@ export default function Contact({ profile }) {
               {/* Status Badge */}
               <div className="mt-8 pt-6 border-t border-slate-800 flex items-center gap-2 text-xs font-mono text-emerald-400">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                <span>Available for Enterprise Roles & Consultations</span>
+                <span>Available for {profile?.title ? `${profile.title} Opportunities` : 'Opportunities & Consultations'}</span>
               </div>
             </div>
           </div>
@@ -158,7 +158,7 @@ export default function Contact({ profile }) {
                   type="text"
                   value={formData.subject}
                   onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                  placeholder="Senior Data Engineer Role / Project Collaboration"
+                  placeholder={`Inquiry regarding ${profile?.title || 'Engineering Roles'}`}
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 focus:border-emerald-500 text-slate-200 text-sm outline-none transition-colors"
                 />
               </div>

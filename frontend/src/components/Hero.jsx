@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Mail,
   Phone,
@@ -11,11 +11,38 @@ import {
   Award,
   Bot,
   Sparkles,
+  Briefcase,
+  FolderGit2,
 } from 'lucide-react';
 import { GithubIcon, LinkedinIcon } from './Icons';
 
-export default function Hero({ profile, onOpenChat }) {
+export default function Hero({
+  profile,
+  experiences = [],
+  skills = [],
+  projects = [],
+  awards = [],
+  certifications = [],
+  onOpenChat,
+}) {
   if (!profile) return null;
+
+  const headlineParts = useMemo(() => {
+    const title = profile?.title || 'Data Engineer, Full Stack Developer';
+    const split = title.split(/[,&/|]/).map((s) => s.trim()).filter(Boolean);
+    if (split.length >= 2) {
+      return {
+        prefix: 'Building High-Velocity',
+        highlight: split[0].includes('Data') ? 'Data Systems' : split[0],
+        suffix: `& ${split[1].replace(/developer|engineer/gi, '').trim() || split[1]} Platforms`,
+      };
+    }
+    return {
+      prefix: 'Building Modern',
+      highlight: title,
+      suffix: 'Platforms',
+    };
+  }, [profile]);
 
   return (
     <section className="relative pt-32 pb-20 md:pt-40 md:pb-32 overflow-hidden bg-grid-pattern">
@@ -30,16 +57,16 @@ export default function Hero({ profile, onOpenChat }) {
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-slate-500">dev@cloud:~$</span>
             <span className="text-emerald-400 font-semibold">whoami --verbose</span>
-            <span className="text-slate-400 hidden sm:inline">| Data & Full Stack Engineer</span>
+            <span className="text-slate-400 hidden sm:inline">| {profile.title || 'Data & Full Stack Engineer'}</span>
           </div>
 
           {/* Main Headline */}
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white mb-6">
-            Building High-Velocity{' '}
+            {headlineParts.prefix}{' '}
             <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
-              Data Systems
+              {headlineParts.highlight}
             </span>{' '}
-            & Full-Stack Platforms
+            {headlineParts.suffix}
           </h1>
 
           {/* Subheading Profile Name & Title */}
@@ -52,38 +79,64 @@ export default function Hero({ profile, onOpenChat }) {
             {profile.summary}
           </p>
 
-          {/* Quick Metrics Cards */}
+          {/* Quick Metrics Cards (Dynamically populated from uploaded data) */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-3xl mx-auto mb-10 text-left">
+            {/* Card 1: Experience */}
             <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800/80 hover:border-emerald-500/30 transition-colors">
               <div className="flex items-center gap-2 text-emerald-400 mb-1">
                 <Code2 className="w-4 h-4" />
-                <span className="text-2xl font-bold font-mono text-white">6+</span>
+                <span className="text-2xl font-bold font-mono text-white">
+                  {profile?.years_experience ? `${profile.years_experience}+` : (experiences.length > 0 ? `${experiences.length}+` : '1+')}
+                </span>
               </div>
               <p className="text-xs text-slate-400 font-medium">Years Experience</p>
             </div>
 
+            {/* Card 2: Enterprise Roles */}
             <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800/80 hover:border-cyan-500/30 transition-colors">
               <div className="flex items-center gap-2 text-cyan-400 mb-1">
-                <Database className="w-4 h-4" />
-                <span className="text-2xl font-bold font-mono text-white">4</span>
+                <Briefcase className="w-4 h-4" />
+                <span className="text-2xl font-bold font-mono text-white">
+                  {experiences.length || (projects.length || '1')}
+                </span>
               </div>
-              <p className="text-xs text-slate-400 font-medium">Enterprise Roles</p>
+              <p className="text-xs text-slate-400 font-medium">
+                {experiences.length === 1 ? 'Career Milestone' : 'Enterprise Roles'}
+              </p>
             </div>
 
+            {/* Card 3: Certifications / Projects */}
             <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800/80 hover:border-emerald-500/30 transition-colors">
               <div className="flex items-center gap-2 text-emerald-400 mb-1">
                 <Cloud className="w-4 h-4" />
-                <span className="text-2xl font-bold font-mono text-white">2x</span>
+                <span className="text-2xl font-bold font-mono text-white">
+                  {certifications.length > 0
+                    ? `${certifications.length}x`
+                    : (projects.length > 0 ? `${projects.length}` : `${skills.length}+`)}
+                </span>
               </div>
-              <p className="text-xs text-slate-400 font-medium">Azure Certified</p>
+              <p className="text-xs text-slate-400 font-medium truncate">
+                {certifications.length > 0
+                  ? `${certifications[0]?.issuer || 'Verified'} Certified`
+                  : (projects.length > 0 ? 'Featured Projects' : 'Core Skills')}
+              </p>
             </div>
 
+            {/* Card 4: Honors / Awards / Projects */}
             <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800/80 hover:border-cyan-500/30 transition-colors">
               <div className="flex items-center gap-2 text-cyan-400 mb-1">
                 <Award className="w-4 h-4" />
-                <span className="text-2xl font-bold font-mono text-white">#8</span>
+                <span className="text-2xl font-bold font-mono text-white">
+                  {awards.length > 0
+                    ? (awards[0]?.title?.match(/#\d+|\b\d+(?:st|nd|rd|th)\b/i)?.[0] || `${awards.length}x`)
+                    : (projects.length > 0 ? `${projects.length}` : `${skills.length}+`)}
+                </span>
               </div>
-              <p className="text-xs text-slate-400 font-medium">TCS Codeathon Rank</p>
+              <p className="text-xs text-slate-400 font-medium truncate">
+                {awards.length > 0
+                  ? (awards[0]?.organization ? `${awards[0].organization} Honor` : 'Awards & Honors')
+                  : (projects.length > 0 ? 'Production Apps' : 'Proficiencies')}
+              </p>
             </div>
           </div>
 
@@ -118,7 +171,7 @@ export default function Hero({ profile, onOpenChat }) {
             </a>
 
             <a
-              href={`mailto:${profile.email || "developer@example.com"}`}
+              href={profile.resume_download_url && profile.resume_download_url !== '#' ? profile.resume_download_url : `mailto:${profile.email || "developer@example.com"}`}
               className="inline-flex items-center gap-2 px-5 py-3 rounded-xl font-mono text-sm text-slate-400 hover:text-white bg-slate-900/40 hover:bg-slate-800/60 border border-slate-800 transition-all"
             >
               <Download className="w-4 h-4" />

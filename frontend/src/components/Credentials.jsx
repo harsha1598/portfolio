@@ -1,7 +1,13 @@
 import React from 'react';
 import { Award, GraduationCap, BadgeCheck, ExternalLink, Calendar } from 'lucide-react';
 
-export default function Credentials({ education, awards, certifications }) {
+export default function Credentials({ education = [], awards = [], certifications = [] }) {
+  const hasCertifications = certifications && certifications.length > 0;
+  const hasAwards = awards && awards.length > 0;
+  const hasEducation = education && education.length > 0;
+
+  if (!hasCertifications && !hasAwards && !hasEducation) return null;
+
   return (
     <section id="credentials" className="py-20 border-t border-slate-900 bg-[#07090e]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -14,7 +20,7 @@ export default function Credentials({ education, awards, certifications }) {
             Education, Certifications & Awards
           </h2>
           <p className="mt-4 text-base text-slate-400">
-            Formal engineering foundations, Microsoft cloud credentials, and corporate honors.
+            Formal engineering foundations, verified credentials, and career honors.
           </p>
         </div>
 
@@ -28,12 +34,16 @@ export default function Credentials({ education, awards, certifications }) {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-white">Certifications</h3>
-                  <p className="text-xs text-slate-400 font-mono">Microsoft Cloud</p>
+                  <p className="text-xs text-slate-400 font-mono">
+                    {hasCertifications
+                      ? `${certifications[0]?.issuer || 'Verified'} Credentials`
+                      : 'Professional Certifications'}
+                  </p>
                 </div>
               </div>
 
               <div className="space-y-4">
-                {certifications &&
+                {hasCertifications ? (
                   certifications.map((cert) => (
                     <div
                       key={cert.id || cert.name}
@@ -60,7 +70,10 @@ export default function Credentials({ education, awards, certifications }) {
                         {cert.issue_date && <span>{cert.issue_date}</span>}
                       </div>
                     </div>
-                  ))}
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500 italic py-4">No certifications listed.</p>
+                )}
               </div>
             </div>
           </div>
@@ -74,12 +87,16 @@ export default function Credentials({ education, awards, certifications }) {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-white">Honors & Awards</h3>
-                  <p className="text-xs text-slate-400 font-mono">Competitions & Corporate</p>
+                  <p className="text-xs text-slate-400 font-mono">
+                    {hasAwards
+                      ? `${awards[0]?.organization || 'Industry'} Honors`
+                      : 'Recognitions & Honors'}
+                  </p>
                 </div>
               </div>
 
               <div className="space-y-4">
-                {awards &&
+                {hasAwards ? (
                   awards.map((award) => (
                     <div
                       key={award.id || award.title}
@@ -98,7 +115,10 @@ export default function Credentials({ education, awards, certifications }) {
                         {award.year && <span>{award.year}</span>}
                       </div>
                     </div>
-                  ))}
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500 italic py-4">No awards listed.</p>
+                )}
               </div>
             </div>
           </div>
@@ -112,12 +132,16 @@ export default function Credentials({ education, awards, certifications }) {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-white">Education</h3>
-                  <p className="text-xs text-slate-400 font-mono">Academic Background</p>
+                  <p className="text-xs text-slate-400 font-mono">
+                    {hasEducation
+                      ? (education[0]?.institution || 'Academic Foundations')
+                      : 'Academic Foundations'}
+                  </p>
                 </div>
               </div>
 
               <div className="space-y-4">
-                {education &&
+                {hasEducation ? (
                   education.map((edu) => (
                     <div
                       key={edu.id || edu.institution}
@@ -133,15 +157,20 @@ export default function Credentials({ education, awards, certifications }) {
                         {edu.institution}
                       </p>
                       <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-800 text-xs font-mono text-slate-400">
+                        {edu.grade && (
+                          <span>
+                            Grade: <strong className="text-emerald-400">{edu.grade}</strong>
+                          </span>
+                        )}
                         <span>
-                          Grade: <strong className="text-emerald-400">{edu.grade}</strong>
-                        </span>
-                        <span>
-                          {edu.start_year} – {edu.end_year}
+                          {edu.start_year} – {edu.end_year || 'Present'}
                         </span>
                       </div>
                     </div>
-                  ))}
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500 italic py-4">No education records listed.</p>
+                )}
               </div>
             </div>
           </div>

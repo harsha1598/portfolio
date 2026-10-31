@@ -119,8 +119,21 @@ export default function App() {
         />
       ) : (
         <main>
-          <Hero profile={portfolioData.profile} onOpenChat={() => setIsChatOpen(true)} />
-          <About profile={portfolioData.profile} />
+          <Hero
+            profile={portfolioData.profile}
+            experiences={portfolioData.experiences || []}
+            skills={portfolioData.skills || []}
+            projects={portfolioData.projects || []}
+            awards={portfolioData.awards || []}
+            certifications={portfolioData.certifications || []}
+            onOpenChat={() => setIsChatOpen(true)}
+          />
+          <About
+            profile={portfolioData.profile}
+            experiences={portfolioData.experiences || []}
+            skills={portfolioData.skills || []}
+            projects={portfolioData.projects || []}
+          />
           <Experience experiences={portfolioData.experiences} />
           <Skills skills={portfolioData.skills} />
           <Projects projects={portfolioData.projects} />
@@ -145,7 +158,7 @@ export default function App() {
         portfolioData={portfolioData}
       />
 
-      {/* Hidden Admin Modal (No routed URL directly in the frontend) */}
+      {/* Hidden Admin Modal */}
       <AdminModal
         isOpen={isAdminOpen}
         onClose={() => setIsAdminOpen(false)}
