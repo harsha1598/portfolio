@@ -124,25 +124,33 @@ export default function ChatWidget({
     }
   }, [messages, isOpen, loading]);
 
-  // Page Navigation with HUD Target Lock Effect
-  const handleNavigatePage = (target) => {
+  // Auto-Navigate to Component without requiring manual button clicks
+  const autoNavigateToComponent = (target) => {
+    if (!target) return;
     if (soundEnabled) playJarvisSound('send');
-    if (target === '#blog') {
+
+    if (target === '#blog' || target === 'blog') {
       window.location.hash = '#blog';
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+
     const sectionId = target.replace('#', '');
+    if (window.location.hash === '#blog') {
+      window.location.hash = '';
+    }
+
     const element = document.getElementById(sectionId);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-      // Holographic HUD Lock-On Pulse
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      // Holographic Cyan Glow Pulse on the auto-navigated component
       element.classList.add(
         'ring-2',
         'ring-cyan-400',
         'ring-offset-4',
         'ring-offset-[#050811]',
-        'shadow-[0_0_50px_rgba(6,182,212,0.35)]',
+        'shadow-[0_0_60px_rgba(6,182,212,0.45)]',
         'transition-all',
         'duration-500'
       );
@@ -152,7 +160,7 @@ export default function ChatWidget({
           'ring-cyan-400',
           'ring-offset-4',
           'ring-offset-[#050811]',
-          'shadow-[0_0_50px_rgba(6,182,212,0.35)]'
+          'shadow-[0_0_60px_rgba(6,182,212,0.45)]'
         );
       }, 2500);
 
@@ -160,9 +168,35 @@ export default function ChatWidget({
         setTimeout(() => {
           const firstInput = element.querySelector('input, textarea');
           if (firstInput) firstInput.focus();
-        }, 500);
+        }, 600);
       }
     }
+  };
+
+  const detectNavigationTarget = (text, userQuery = '') => {
+    const navMatch = text.match(/\[NAV:([a-zA-Z0-9_-]+)\]/);
+    if (navMatch) return navMatch[1];
+
+    const combined = `${userQuery} ${text}`.toLowerCase();
+    if (combined.includes('project') || combined.includes('schematic') || combined.includes('streaming engine')) {
+      return 'projects';
+    }
+    if (combined.includes('skill') || combined.includes('tech stack') || combined.includes('technolog') || combined.includes('language')) {
+      return 'skills';
+    }
+    if (combined.includes('philosoph') || combined.includes('architecture milestone') || combined.includes('insight')) {
+      return 'ai-insights';
+    }
+    if (combined.includes('experience') || combined.includes('career') || combined.includes('compan') || combined.includes('work history')) {
+      return 'experience';
+    }
+    if (combined.includes('contact') || combined.includes('hire') || combined.includes('email') || combined.includes('transmit') || combined.includes('reach out')) {
+      return 'contact';
+    }
+    if (combined.includes('blog') || combined.includes('article') || combined.includes('post')) {
+      return 'blog';
+    }
+    return null;
   };
 
   // Text-To-Speech with refined J.A.R.V.I.S. voice selection
@@ -226,55 +260,37 @@ export default function ChatWidget({
     ]);
   };
 
-  // Render message with J.A.R.V.I.S. HUD action cards
-  const renderMessageContent = (rawText, isUser) => {
+  // Render message with J.A.R.V.I.S. auto-navigation telemetry (no buttons needed)
+  const renderMessageContent = (rawText, isUser, navTarget) => {
     if (isUser) {
       return <span>{rawText}</span>;
     }
 
-    const navRegex = /\[NAV:([a-zA-Z0-9_-]+)\]/g;
-    const actions = [];
-    let match;
-    while ((match = navRegex.exec(rawText)) !== null) {
-      const target = match[1];
-      if (target === 'projects') actions.push({ label: 'LOCK ON: PROJECTS SCHEMATIC', target: '#projects' });
-      else if (target === 'skills') actions.push({ label: 'ENGAGE: SKILLS TELEMETRY', target: '#skills' });
-      else if (target === 'experience') actions.push({ label: 'RETRIEVE: CAREER DOSSIER', target: '#experience' });
-      else if (target === 'ai-insights') actions.push({ label: 'ANALYZE: ARCHITECTURE MATRIX', target: '#ai-insights' });
-      else if (target === 'contact') actions.push({ label: 'TRANSMIT: CONTACT PROTOCOL', target: '#contact' });
-      else if (target === 'blog') actions.push({ label: 'ACCESS: TECHNICAL ARCHIVES', target: '#blog' });
-    }
-
-    const cleanText = rawText.replace(navRegex, '').trim();
+    const cleanText = rawText.replace(/\[NAV:[a-zA-Z0-9_-]+\]/g, '').trim();
 
     return (
       <div className="space-y-3">
         <div className="whitespace-pre-line leading-relaxed font-sans text-slate-200">{cleanText}</div>
 
-        {actions.length > 0 && (
-          <div className="pt-2.5 border-t border-cyan-500/20 flex flex-wrap gap-2">
-            {actions.map((act, i) => (
-              <button
-                key={i}
-                onClick={() => handleNavigatePage(act.target)}
-                className="group inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-mono tracking-wider uppercase bg-cyan-950/80 hover:bg-cyan-900/90 text-cyan-300 border border-cyan-500/40 hover:border-cyan-400 transition-all cursor-pointer shadow-sm shadow-cyan-500/20 active:scale-95"
-              >
-                <Crosshair className="w-3 h-3 text-cyan-400 group-hover:rotate-45 transition-transform" />
-                <span>{act.label}</span>
-                <ArrowRight className="w-3 h-3 text-cyan-400 group-hover:translate-x-0.5 transition-transform" />
-              </button>
-            ))}
+        {navTarget && (
+          <div className="pt-2 border-t border-cyan-500/20 flex items-center gap-2 text-[10px] font-mono text-cyan-300">
+            <Crosshair className="w-3 h-3 text-cyan-400 animate-spin" />
+            <span>AUTO-NAVIGATED DISPLAY // #{navTarget.toUpperCase()}</span>
           </div>
         )}
       </div>
     );
   };
 
-  const handleSend = async (messageText = input, overrideMode = activeMode) => {
+  const handleSend = async (messageText = input, overrideMode = activeMode, explicitTarget = null) => {
     const text = messageText.trim();
     if (!text || loading) return;
 
     if (soundEnabled) playJarvisSound('send');
+    if (explicitTarget) {
+      autoNavigateToComponent(explicitTarget);
+    }
+
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const newMessages = [...messages, { role: 'user', text, timestamp: time, mode: overrideMode }];
     setMessages(newMessages);
@@ -283,6 +299,11 @@ export default function ChatWidget({
 
     try {
       const res = await sendChatMessage(text, overrideMode);
+      const detectedTarget = explicitTarget || detectNavigationTarget(res.reply, text);
+      if (detectedTarget) {
+        autoNavigateToComponent(detectedTarget);
+      }
+
       setMessages([
         ...newMessages,
         {
@@ -291,15 +312,18 @@ export default function ChatWidget({
           model: res.model,
           latency: res.latency_s,
           mode: res.mode || overrideMode,
+          navTarget: detectedTarget,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
     } catch {
+      autoNavigateToComponent('contact');
       setMessages([
         ...newMessages,
         {
           role: 'assistant',
-          text: "Communications link disrupted. Please transmit your message directly through the secure contact channel. [NAV:contact]",
+          text: "Communications link disrupted. Auto-navigating to the secure contact channel.",
+          navTarget: 'contact',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
@@ -545,7 +569,7 @@ export default function ChatWidget({
             <span className="text-cyan-500/80">DIRECTIVES:</span>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => handleSend(`Retrieve schematics for ${firstName}'s top engineering projects`, 'technical')}
+                onClick={() => handleSend(`Retrieve schematics for ${firstName}'s top engineering projects`, 'technical', 'projects')}
                 className="hover:text-cyan-300 flex items-center gap-1 transition-colors cursor-pointer"
               >
                 <Code2 className="w-3 h-3 text-cyan-400" />
@@ -553,7 +577,7 @@ export default function ChatWidget({
               </button>
               <span className="text-cyan-900">|</span>
               <button
-                onClick={() => handleSend(`What is ${firstName}'s core production tech stack?`, 'technical')}
+                onClick={() => handleSend(`What is ${firstName}'s core production tech stack?`, 'technical', 'skills')}
                 className="hover:text-cyan-300 flex items-center gap-1 transition-colors cursor-pointer"
               >
                 <Cpu className="w-3 h-3 text-cyan-400" />
@@ -561,7 +585,7 @@ export default function ChatWidget({
               </button>
               <span className="text-cyan-900">|</span>
               <button
-                onClick={() => handleSend(`Detail ${firstName}'s architectural philosophy`, 'technical')}
+                onClick={() => handleSend(`Detail ${firstName}'s architectural philosophy`, 'technical', 'ai-insights')}
                 className="hover:text-cyan-300 flex items-center gap-1 transition-colors cursor-pointer"
               >
                 <Sparkles className="w-3 h-3 text-cyan-400" />
@@ -569,7 +593,7 @@ export default function ChatWidget({
               </button>
               <span className="text-cyan-900">|</span>
               <button
-                onClick={() => handleSend(`How can I transmit a message to ${firstName}?`, 'general')}
+                onClick={() => handleSend(`How can I transmit a message to ${firstName}?`, 'general', 'contact')}
                 className="hover:text-cyan-300 flex items-center gap-1 transition-colors cursor-pointer"
               >
                 <Send className="w-3 h-3 text-cyan-400" />
@@ -602,7 +626,7 @@ export default function ChatWidget({
                     </div>
                   )}
 
-                  {renderMessageContent(msg.text, msg.role === 'user')}
+                  {renderMessageContent(msg.text, msg.role === 'user', msg.navTarget)}
 
                   {/* Assistant Telemetry & Audio Bar */}
                   {msg.role === 'assistant' && (
