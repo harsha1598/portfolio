@@ -712,8 +712,7 @@ async def trigger_generate_ai_insights(
 # Dynamic AI Agent System Prompt
 # -----------------------------
 
-def build_dynamic_agent_prompt(db: Session, custom_data: Optional[dict] = None) -> str:
-    # If custom_data is provided and has profile:
+def build_dynamic_agent_prompt(db: Session, custom_data: Optional[dict] = None, mode: str = "general") -> str:
     if custom_data and isinstance(custom_data, dict) and custom_data.get("profile"):
         prof = custom_data.get("profile", {})
         name = prof.get("name") or "the developer"
@@ -741,16 +740,78 @@ def build_dynamic_agent_prompt(db: Session, custom_data: Optional[dict] = None) 
 
         skills = custom_data.get("skills", [])
         skill_names = ", ".join([s.get("name", "") for s in skills[:25] if s.get("name")])
+
+        projects = custom_data.get("projects", [])
+        proj_bullets = []
+        for p in projects[:5]:
+            p_title = p.get("title", "")
+            p_tech = p.get("tech_stack", "")
+            p_desc = p.get("description", "")
+            proj_bullets.append(f"- {p_title} ({p_tech}): {p_desc}")
+
+        insights = custom_data.get("ai_insights", [])
+        insight_bullets = []
+        for i in insights:
+            t = i.get("title") or ""
+            sub = i.get("subtitle") or ""
+            insight_bullets.append(f"- {t} ({sub})")
+
         awards = custom_data.get("awards", [])
         award_names = ", ".join([a.get("title", "") for a in awards if a.get("title")])
         certs = custom_data.get("certifications", [])
         cert_names = ", ".join([c.get("name", "") for c in certs if c.get("name")])
+    else:
+        profile = db.query(Profile).first()
+        name = profile.name if profile and profile.name else "the developer"
+        title = profile.title if profile and profile.title else "Full Stack Developer & Data Engineer"
+        summary = profile.summary if profile and profile.summary else ""
+        location = profile.location if profile and profile.location else ""
+        email = profile.email if profile and profile.email else ""
+        phone = profile.phone if profile and profile.phone else ""
+        linkedin = profile.linkedin_url if profile and profile.linkedin_url else ""
+        github = profile.github_url if profile and profile.github_url else ""
 
-        first_company = exps[0].get("company") if exps else "their company"
-        prompt = f"""You are the personal AI Assistant and professional representative for {name} ({title}) on this portfolio website.
-Your mission is to represent {name} accurately, engagingly, and professionally to engineering recruiters, hiring managers, and clients.
+        exps = db.query(Experience).order_by(Experience.display_order.asc()).all()
+        exp_bullets = []
+        for e in exps:
+            bullet = f"- {e.role} at {e.company} ({e.start_date} – {e.end_date or 'Present'}): {e.description or ''}"
+            if e.skills_text:
+                bullet += f" [Skills: {e.skills_text}]"
+            exp_bullets.append(bullet)
 
-Profile Overview:
+        skills = db.query(Skill).order_by(Skill.display_order.asc()).all()
+        skill_names = ", ".join([s.name for s in skills[:25]])
+
+        projects = db.query(Project).order_by(Project.display_order.asc()).all()
+        proj_bullets = [f"- {p.title} ({p.tech_stack}): {p.description}" for p in projects[:5]]
+
+        insights = db.query(AiInsight).order_by(AiInsight.display_order.asc()).all()
+        insight_bullets = [f"- {i.title}: {i.subtitle}" for i in insights]
+
+        awards = db.query(Award).all()
+        award_names = ", ".join([a.title for a in awards])
+
+        certs = db.query(Certification).all()
+        cert_names = ", ".join([c.name for c in certs])
+
+    mode_guidance = ""
+    if mode == "technical":
+        mode_guidance = f"MODE: TECHNICAL DEEP-DIVE. Provide in-depth technical explanations with code patterns, API latency considerations, database query tuning, and distributed concurrency."
+    elif mode == "challenge":
+        mode_guidance = f"MODE: SYSTEM DESIGN CHALLENGE. The user is asking how {name} would solve or architect a system design challenge. Structure your response as a Principal Architect: 1. Core Architecture Blueprint, 2. Tech Stack Choices ({skill_names[:60]}), 3. Scalability & Latency Strategy, 4. Edge Cases & Resiliency."
+    elif mode == "recruiter":
+        mode_guidance = f"MODE: EXPERIENCE & CAREER FIT. Highlight {name}'s career trajectory, tangible business impacts, engineering leadership, and role availability."
+    elif mode == "tldr":
+        mode_guidance = f"MODE: 60-SECOND TL;DR. Deliver an ultra-punchy 3-bullet summary of {name}'s superpowers and accomplishments."
+    else:
+        mode_guidance = "MODE: INTERACTIVE ASSISTANT. Speak authoritatively, articulately, and concisely about the developer's background."
+
+    prompt = f"""You are the personal interactive AI Agent for {name} ({title}) on this portfolio website.
+Your mission is to represent {name} accurately, engagingly, and professionally. You speak in the third person ("{name} built...", "{name} specializes in...").
+
+{mode_guidance}
+
+Candidate Profile:
 - Name: {name}
 - Headline / Role: {title}
 - Location: {location}
@@ -758,83 +819,34 @@ Profile Overview:
 - Contact Phone: {phone}
 - LinkedIn: {linkedin}
 - GitHub: {github}
-- Summary: {summary}
+- Bio Summary: {summary}
 
-Professional Experience:
+Engineering Experience:
 {chr(10).join(exp_bullets) if exp_bullets else '- Experienced software and data engineer.'}
+
+Key Projects:
+{chr(10).join(proj_bullets) if proj_bullets else '- Distributed Streaming & Microservices Platform'}
 
 Technical Skills:
 {skill_names if skill_names else 'Full Stack, Cloud, Data Engineering'}
+
+Architectural Philosophy & Milestones:
+{chr(10).join(insight_bullets) if insight_bullets else '- Low-latency distributed pipelines and resilient microservices.'}
 
 Certifications & Awards:
 - Certifications: {cert_names if cert_names else 'None listed'}
 - Awards: {award_names if award_names else 'None listed'}
 
-Guidelines:
-- Speak in the third person about {name} ("{name} has deep expertise in...", "At {first_company}, {name} built...").
-- Keep replies concise, articulate, and technical (2-4 sentences or short bullet points).
-- Respond directly to the user's question without any introductory reasoning, thinking notes, or drafts.
-- If recruiters ask about hiring, invite them to leave a message via the contact form or email {email}.
-- Base your answers strictly on the profile details above.
-"""
-        return prompt.strip()
-
-    profile = db.query(Profile).first()
-    name = profile.name if profile and profile.name else "the developer"
-    title = profile.title if profile and profile.title else "Full Stack Developer & Data Engineer"
-    summary = profile.summary if profile and profile.summary else ""
-    location = profile.location if profile and profile.location else ""
-    email = profile.email if profile and profile.email else ""
-    phone = profile.phone if profile and profile.phone else ""
-    linkedin = profile.linkedin_url if profile and profile.linkedin_url else ""
-    github = profile.github_url if profile and profile.github_url else ""
-
-    exps = db.query(Experience).order_by(Experience.display_order.asc()).all()
-    exp_bullets = []
-    for e in exps:
-        bullet = f"- {e.role} at {e.company} ({e.start_date} – {e.end_date or 'Present'}): {e.description or ''}"
-        if e.skills_text:
-            bullet += f" [Skills: {e.skills_text}]"
-        exp_bullets.append(bullet)
-
-    skills = db.query(Skill).order_by(Skill.display_order.asc()).all()
-    skill_names = ", ".join([s.name for s in skills[:25]])
-
-    awards = db.query(Award).all()
-    award_names = ", ".join([a.title for a in awards])
-
-    certs = db.query(Certification).all()
-    cert_names = ", ".join([c.name for c in certs])
-
-    prompt = f"""You are the personal AI Assistant and professional representative for {name} ({title}) on this portfolio website.
-Your mission is to represent {name} accurately, engagingly, and professionally to engineering recruiters, hiring managers, and clients.
-
-Profile Overview:
-- Name: {name}
-- Headline / Role: {title}
-- Location: {location}
-- Contact Email: {email}
-- Contact Phone: {phone}
-- LinkedIn: {linkedin}
-- GitHub: {github}
-- Summary: {summary}
-
-Professional Experience:
-{chr(10).join(exp_bullets) if exp_bullets else '- Experienced software and data engineer.'}
-
-Technical Skills:
-{skill_names if skill_names else 'Full Stack, Cloud, Data Engineering'}
-
-Certifications & Awards:
-- Certifications: {cert_names if cert_names else 'None listed'}
-- Awards: {award_names if award_names else 'None listed'}
-
-Guidelines:
-- Speak in the third person about {name} ("{name} has deep expertise in...", "At {exps[0].company if exps else 'their company'}, {name} built...").
-- Keep replies concise, articulate, and technical (2-4 sentences or short bullet points).
-- Respond directly to the user's question without any introductory reasoning, thinking notes, or drafts.
-- If recruiters ask about hiring, invite them to leave a message via the contact form or email {email}.
-- Base your answers strictly on the profile details above.
+Interactive Navigation Guidelines:
+- Keep replies concise, articulate, and technical (2-4 sentences or clean bullet points).
+- When relevant to what you are describing, you can append one of the following exact navigation tags at the very end of your reply to let the visitor jump directly to that section on the live page:
+  [NAV:projects] -> when recommending they look at projects
+  [NAV:experience] -> when recommending work history
+  [NAV:skills] -> when recommending skills matrix
+  [NAV:ai-insights] -> when recommending engineering philosophy
+  [NAV:contact] -> when encouraging them to reach out or leave a message
+  [NAV:blog] -> when mentioning technical blog articles
+The website UI will automatically convert these tags into interactive 1-click jump buttons.
 """
     return prompt.strip()
 
@@ -851,6 +863,7 @@ from pydantic import BaseModel
 class ChatRequest(BaseModel):
     message: str
     portfolio_data: Optional[Dict[str, Any]] = None
+    mode: Optional[str] = "general"
 
 # In-memory prompt cache to eliminate redundant DB queries on every turn
 _cached_prompt: Optional[str] = None
@@ -861,16 +874,19 @@ def invalidate_agent_prompt_cache():
     _cached_prompt = None
     _cached_prompt_time = 0.0
 
-def get_or_build_agent_prompt(db: Session, custom_data: Optional[Dict[str, Any]] = None) -> str:
+def get_or_build_agent_prompt(db: Session, custom_data: Optional[Dict[str, Any]] = None, mode: str = "general") -> str:
     global _cached_prompt, _cached_prompt_time
     if custom_data and isinstance(custom_data, dict) and custom_data.get("profile"):
-        return build_dynamic_agent_prompt(db, custom_data=custom_data)
+        return build_dynamic_agent_prompt(db, custom_data=custom_data, mode=mode)
     
+    if mode != "general":
+        return build_dynamic_agent_prompt(db, custom_data=None, mode=mode)
+
     now = time.time()
     if _cached_prompt and (now - _cached_prompt_time < 300):
         return _cached_prompt
     
-    _cached_prompt = build_dynamic_agent_prompt(db, custom_data=None)
+    _cached_prompt = build_dynamic_agent_prompt(db, custom_data=None, mode="general")
     _cached_prompt_time = now
     return _cached_prompt
 
@@ -1105,7 +1121,7 @@ async def chat_with_harsha_agent(req: ChatRequest, db: Session = Depends(get_db)
         "Content-Type": "application/json"
     }
 
-    system_prompt = get_or_build_agent_prompt(db, custom_data=req.portfolio_data)
+    system_prompt = get_or_build_agent_prompt(db, custom_data=req.portfolio_data, mode=req.mode or "general")
 
     payload = {
         "system_instruction": {
@@ -1134,7 +1150,7 @@ async def chat_with_harsha_agent(req: ChatRequest, db: Session = Depends(get_db)
                 if candidates and "content" in candidates[0]:
                     text = candidates[0]["content"]["parts"][0]["text"]
                     elapsed = round(time.time() - t_start, 2)
-                    return {"reply": text, "model": model_name, "latency_s": elapsed}
+                    return {"reply": text, "model": model_name, "latency_s": elapsed, "mode": req.mode or "general"}
                 return {"reply": "Received empty response from Gemini."}
 
             try:

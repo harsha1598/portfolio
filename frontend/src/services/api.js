@@ -236,8 +236,8 @@ export const resetToDefaults = async () => {
   localStorage.removeItem(LOCAL_STORAGE_KEY);
   return { ...defaultPortfolioData, is_custom: false };
 };
-// AI Agent Chat
-export const sendChatMessage = async (message) => {
+// AI Agent Chat (Interactive Multi-Mode Support)
+export const sendChatMessage = async (message, mode = 'general') => {
   try {
     const local = getLocalData();
     const res = await smartFetch('/chat', {
@@ -246,6 +246,7 @@ export const sendChatMessage = async (message) => {
       body: JSON.stringify({ 
         message,
         portfolio_data: local,
+        mode,
       }),
     });
     return await res.json();
