@@ -97,11 +97,19 @@ def populate_from_resume_payload(db: Session, payload: dict) -> None:
     exp_items = sections.get("experience", {}).get("items", [])
     for idx, e in enumerate(exp_items):
         raw_desc = e.get("description", "")
-        clean_desc = clean_html_tags(raw_desc)
+        # Extract skills_text with robust regex
+        skills_match = re.search(r"Skill\(s\)\s*[-:]\s*(?:</strong>)?(.*?)(?:</strong>)?\s*</p>", raw_desc, re.IGNORECASE | re.DOTALL)
+        if not skills_match:
+            skills_match = re.search(r"Skill\(s\)\s*[-:]\s*(.*?)(?:</p>|<ul>|<li>|$)", raw_desc, re.IGNORECASE)
+        skills_text = clean_html_tags(skills_match.group(1)).rstrip(".") if skills_match else ""
+
+        # Extract bullets from <li> tags
         bullets = extract_bullets_from_html(raw_desc)
 
-        skills_match = re.search(r"Skill\(s\)\s*-\s*</strong>(.*?)</p>", raw_desc, re.IGNORECASE)
-        skills_text = clean_html_tags(skills_match.group(1)) if skills_match else ""
+        # Extract pure description: remove <p>...Skill(s)...</p> and <ul>...</ul>
+        desc_without_skills = re.sub(r"<p>\s*(?:<strong>)?\s*Skill\(s\).*?<\/p>", "", raw_desc, flags=re.IGNORECASE | re.DOTALL)
+        desc_without_bullets = re.sub(r"<ul[^>]*>.*?<\/ul>", "", desc_without_skills, flags=re.IGNORECASE | re.DOTALL)
+        clean_desc = clean_html_tags(desc_without_bullets).strip()
 
         period = e.get("period", "")
         period_parts = [p.strip() for p in re.split(r"\s*(?:[\u2013\u2014\-]|\bto\b)\s*", period) if p.strip()] if period else []
@@ -135,7 +143,7 @@ def populate_from_resume_payload(db: Session, payload: dict) -> None:
                 clean_desc = f"Key contributor to software engineering and data solutions at {company}."
                 bullets = [clean_desc]
         elif not clean_desc and bullets:
-            clean_desc = f"Key initiatives at {company}:"
+            clean_desc = ""
 
         exp = Experience(
             company=company,

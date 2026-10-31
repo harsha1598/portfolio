@@ -77,11 +77,24 @@ export default function Experience({ experiences }) {
                     </div>
                   </div>
 
-                  {exp.description && (
-                    <p className="text-sm text-slate-300 mb-4 italic">
-                      {exp.description}
-                    </p>
-                  )}
+                  {(() => {
+                    if (!exp.description) return null;
+                    const cleanDesc = exp.description.trim();
+                    if (/^skill\(s\)/i.test(cleanDesc) || /^skills:/i.test(cleanDesc)) {
+                      return null;
+                    }
+                    if (
+                      bullets.length > 0 &&
+                      bullets.some((b) => cleanDesc.includes(b.trim()) && cleanDesc.length > 200)
+                    ) {
+                      return null;
+                    }
+                    return (
+                      <p className="text-sm text-slate-300 mb-4 italic">
+                        {cleanDesc}
+                      </p>
+                    );
+                  })()}
 
                   {/* Achievements Bullet List */}
                   {bullets.length > 0 && (

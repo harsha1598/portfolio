@@ -345,15 +345,14 @@ export function parseResumeJson(jsonPayload) {
   const expItems = jsonPayload.sections?.experience?.items || [];
   const experiences = expItems.map((e, idx) => {
     const rawDesc = e.description || '';
-    const cleanDesc = rawDesc
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
 
+    // Extract skills_text with robust regex
+    const skillsMatch =
+      rawDesc.match(/Skill\(s\)\s*[-:]\s*(?:<\/strong>)?(.*?)(?:<\/strong>)?\s*<\/p>/i) ||
+      rawDesc.match(/Skill\(s\)\s*[-:]\s*(.*?)(?:<\/p>|<ul>|<li>|$)/i);
+    let skillsText = skillsMatch ? skillsMatch[1].replace(/<[^>]+>/g, '').trim().replace(/\.$/, '') : '';
+
+    // Extract bullets from <li> tags
     const bullets = Array.from(rawDesc.matchAll(/<li>(?:<p>)?(.*?)(?:<\/p>)?<\/li>/gs)).map(m =>
       m[1]
         .replace(/&nbsp;/g, ' ')
@@ -363,8 +362,18 @@ export function parseResumeJson(jsonPayload) {
         .trim()
     ).filter(Boolean);
 
-    const skillsMatch = rawDesc.match(/Skill\(s\)\s*-\s*<\/strong>(.*?)<\/p>/i);
-    let skillsText = skillsMatch ? skillsMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+    // Extract pure description: remove Skill(s) paragraph and <ul>...</ul> block
+    const descWithoutSkills = rawDesc.replace(/<p>\s*(?:<strong>)?\s*Skill\(s\).*?<\/p>/gis, '');
+    const descWithoutBullets = descWithoutSkills.replace(/<ul[^>]*>.*?<\/ul>/gis, '');
+    let cleanDesc = descWithoutBullets
+      .replace(/<style[^>]*>.*?<\/style>/gis, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
 
     const period = e.period || '';
     const periodParts = period ? period.split(/\s*(?:[\u2013\u2014\-]|\bto\b)\s*/).filter(Boolean) : [];
@@ -404,7 +413,7 @@ export function parseResumeJson(jsonPayload) {
         finalBullets = [finalDesc];
       }
     } else if (!cleanDesc && bullets.length) {
-      finalDesc = `Key initiatives at ${company}:`;
+      finalDesc = '';
     }
 
     return {

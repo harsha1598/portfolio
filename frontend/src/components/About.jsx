@@ -94,12 +94,18 @@ export default function About({ profile, experiences = [], skills = [], projects
     // 6. Experience / Enterprise Delivery Card
     if (experiences.length > 0) {
       const topExp = experiences[0];
+      const roleText = topExp.role || 'Software Engineer';
+      const cleanSummary =
+        topExp.description &&
+        !/^skill\(s\)/i.test(topExp.description.trim()) &&
+        topExp.description.length < 180
+          ? topExp.description
+          : `Delivering production-grade software, scalable architectures, and mission-critical systems as ${roleText}.`;
+
       cards.push({
         icon: <ShieldCheck className="w-6 h-6 text-teal-400" />,
         title: `Enterprise Delivery at ${topExp.company}`,
-        description:
-          topExp.description ||
-          `Delivering production-grade software and collaborating across cross-functional teams as ${topExp.role}.`,
+        description: cleanSummary,
       });
     }
 
