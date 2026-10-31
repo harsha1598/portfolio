@@ -968,6 +968,218 @@ function NeuralVoiceWave({ isSpeaking, isListening, onToggleSpeech, hasText }) {
 }
 
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// 7. Contextual Follow-Up Suggestions Engine
+// ---------------------------------------------------------------------------
+function getFollowUpSuggestions(storyType = 'overview', text = '', name = 'Harsha') {
+  switch (storyType) {
+    case 'genai':
+      return [
+        {
+          label: 'How does the server-side math check work?',
+          query: 'How does the server-side math grounding gate work in code?',
+        },
+        {
+          label: 'What were the LiteLLM prompt cache latency gains?',
+          query: 'What are the exact latency benchmarks of LiteLLM prompt caching?',
+        },
+        {
+          label: 'What MCP specialist tools did ' + name + ' develop?',
+          query: 'What MCP specialist tools and autonomous agents did ' + name + ' build?',
+        },
+        {
+          label: 'Read "Never Let the LLM Do the Math" schematics',
+          query: 'Tell me about the Grounded Generation blog post',
+        },
+      ];
+
+    case 'performance':
+      return [
+        {
+          label: 'How does HyperLogLog union sketches at query time?',
+          query: 'How does HyperLogLog union sketches across locations and dates?',
+        },
+        {
+          label: 'What composite index order was used in Postgres?',
+          query: 'What composite index order and query plan tips does ' + name + ' recommend?',
+        },
+        {
+          label: 'How is chunked file streaming implemented?',
+          query: 'How does streaming upload reduce peak memory from 100MB to 1MB?',
+        },
+        {
+          label: 'Read "Fast, Safe, Reliable APIs" schematics',
+          query: 'Tell me about the Backend Performance and Reliability post',
+        },
+      ];
+
+    case 'bigdata':
+      return [
+        {
+          label: 'Tell me about PySpark pipelines at PwC AC India',
+          query: 'What PySpark ETL pipelines did ' + name + ' design at PwC AC India?',
+        },
+        {
+          label: 'How does Azure Synapse integrate with Databricks?',
+          query: 'How did ' + name + ' architect Azure Synapse and Databricks solutions?',
+        },
+        {
+          label: 'Show projects using Big Data and Cloud',
+          query: 'What featured projects showcase cloud and big data engineering?',
+        },
+        {
+          label: 'View skills matrix for data engineering',
+          query: 'What are ' + name + '\'s data engineering and cloud skills?',
+        },
+      ];
+
+    case 'skills':
+      return [
+        {
+          label: 'What backend frameworks does ' + name + ' specialize in?',
+          query: 'Tell me about ' + name + '\'s Python, FastAPI, and backend expertise',
+        },
+        {
+          label: 'Show production projects built with these skills',
+          query: 'Show me ' + name + '\'s featured production projects',
+        },
+        {
+          label: 'Which enterprise roles utilized these technologies?',
+          query: 'What technologies did ' + name + ' use at Deloitte, PwC, and TCS?',
+        },
+        {
+          label: 'What is ' + name + '\'s GenAI and agent architecture?',
+          query: 'What is ' + name + '\'s GenAI architecture pattern?',
+        },
+      ];
+
+    case 'projects':
+      return [
+        {
+          label: 'Which project had the highest performance impact?',
+          query: 'Which project had the highest scalability and performance impact?',
+        },
+        {
+          label: 'What GenAI or autonomous agent projects exist?',
+          query: 'Show me ' + name + '\'s GenAI and autonomous agent projects',
+        },
+        {
+          label: 'Where can I inspect the GitHub source code?',
+          query: 'Where can I find ' + name + '\'s GitHub repositories and source code?',
+        },
+        {
+          label: 'How can I connect with ' + name + ' regarding these projects?',
+          query: 'How can I get in touch with ' + name + '?',
+        },
+      ];
+
+    case 'experience':
+      return [
+        {
+          label: 'What was ' + name + '\'s largest impact at Deloitte USI?',
+          query: 'What was ' + name + '\'s core architectural impact at Deloitte USI?',
+        },
+        {
+          label: 'What distributed pipelines were built at PwC?',
+          query: 'What distributed data pipelines did ' + name + ' build at PwC AC India?',
+        },
+        {
+          label: 'What was ' + name + '\'s engineering role at TCS?',
+          query: 'What systems did ' + name + ' engineer at TCS?',
+        },
+        {
+          label: 'What technical publications has ' + name + ' authored?',
+          query: 'What technical blog posts has ' + name + ' written?',
+        },
+      ];
+
+    case 'blog':
+      return [
+        {
+          label: 'What is the core takeaway of Grounded Generation?',
+          query: 'What is the main architectural principle of Grounded LLM Generation?',
+        },
+        {
+          label: 'Why is HyperLogLog preferred for analytics APIs?',
+          query: 'Why use HyperLogLog sketches instead of exact distinct counts?',
+        },
+        {
+          label: 'How do you prevent authorization wildcards?',
+          query: 'How should API authorization be designed to avoid permission creep?',
+        },
+        {
+          label: 'Show system architecture flow diagram',
+          query: 'Show me ' + name + '\'s GenAI architecture flow diagram',
+        },
+      ];
+
+    case 'contact':
+      return [
+        {
+          label: 'What engineering roles is ' + name + ' open to?',
+          query: 'What engineering roles and opportunities is ' + name + ' open to?',
+        },
+        {
+          label: 'What is ' + name + '\'s email and LinkedIn?',
+          query: 'What is ' + name + '\'s direct email address and LinkedIn profile?',
+        },
+        {
+          label: 'Review ' + name + '\'s production projects',
+          query: 'Show me ' + name + '\'s top production projects',
+        },
+        {
+          label: 'Inspect architectural competency radar',
+          query: 'Show me the architectural competency radar chart',
+        },
+      ];
+
+    default:
+      return [
+        {
+          label: '⚡ Explore GenAI & LiteLLM Gateway flow',
+          query: 'Tell me about ' + name + '\'s GenAI and Grounded Architecture work',
+        },
+        {
+          label: '🚀 Inspect Postgres & API performance graphs',
+          query: 'Explain ' + name + '\'s API and Postgres performance optimization patterns',
+        },
+        {
+          label: '📊 View interactive Competency Radar',
+          query: 'Display ' + name + '\'s competency radar and skills matrix',
+        },
+        {
+          label: '🏛️ Explore enterprise career milestones',
+          query: 'Summarize ' + name + '\'s enterprise career milestones at Deloitte, PwC, and TCS',
+        },
+      ];
+  }
+}
+
+function FollowUpSuggestions({ suggestions = [], onSelect }) {
+  if (!suggestions || suggestions.length === 0) return null;
+
+  return (
+    <div className="pt-3.5 border-t border-cyan-500/20 space-y-2">
+      <div className="flex items-center gap-1.5 text-[10px] font-mono text-cyan-400 uppercase tracking-widest">
+        <Sparkles className="w-3 h-3 text-cyan-300 animate-pulse" />
+        <span>SUGGESTED FOLLOW-UP INQUIRIES:</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {suggestions.map((item, idx) => (
+          <button
+            key={idx}
+            onClick={() => onSelect(item.query)}
+            className="group px-3 py-1.5 rounded-xl text-xs font-mono bg-slate-950/90 hover:bg-cyan-950/60 border border-slate-800 hover:border-cyan-400/60 text-slate-300 hover:text-cyan-200 transition-all duration-200 shadow-sm hover:shadow-[0_0_15px_rgba(6,182,212,0.25)] flex items-center gap-1.5 cursor-pointer text-left"
+          >
+            <span className="text-cyan-400 group-hover:translate-x-0.5 transition-transform text-[11px]">▹</span>
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Main AI Command Center Component
 // ---------------------------------------------------------------------------
 export default function ChatWidget({
@@ -2144,6 +2356,12 @@ Enter any inquiry or select a deep-dive visual dossier below:`,
 
                   {/* Render Rich Visual Story, Real Charts, Graphs & Interactive Components */}
                   {renderVisualStory(msg.storyType, msg.text)}
+
+                  {/* Contextual Follow-Up Suggestions */}
+                  <FollowUpSuggestions
+                    suggestions={getFollowUpSuggestions(msg.storyType, msg.text, firstName)}
+                    onSelect={(query) => handleSend(query)}
+                  />
                 </div>
               );
             })}
