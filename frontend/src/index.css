@@ -160,3 +160,38 @@
 .animate-scanline {
   animation: scanline 7s linear infinite;
 }
+.animate-radar-sweep {
+  transform-origin: center;
+  animation: radar-sweep 6s linear infinite;
+}
+
+/* Holographic Equalizer & Audio Waveform */
+@keyframes eq-dance-1 { 0%, 100% { height: 4px; } 50% { height: 18px; } }
+@keyframes eq-dance-2 { 0%, 100% { height: 16px; } 50% { height: 6px; } }
+@keyframes eq-dance-3 { 0%, 100% { height: 8px; } 50% { height: 22px; } }
+@keyframes eq-dance-4 { 0%, 100% { height: 20px; } 50% { height: 10px; } }
+@keyframes eq-dance-5 { 0%, 100% { height: 6px; } 50% { height: 16px; } }
+
+.animate-eq-1 { animation: eq-dance-1 0.75s ease-in-out infinite; }
+.animate-eq-2 { animation: eq-dance-2 0.6s ease-in-out infinite; }
+.animate-eq-3 { animation: eq-dance-3 0.85s ease-in-out infinite; }
+.animate-eq-4 { animation: eq-dance-4 0.7s ease-in-out infinite; }
+.animate-eq-5 { animation: eq-dance-5 0.9s ease-in-out infinite; }
+
+/* SVG Pulse Flow Animation */
+@keyframes svg-flow {
+  0% { stroke-dashoffset: 40; }
+  100% { stroke-dashoffset: 0; }
+}
+.animate-svg-flow {
+  stroke-dasharray: 6 6;
+  animation: svg-flow 1.4s linear infinite;
+}
+
+@keyframes neural-glow {
+  0%, 100% { opacity: 0.45; filter: drop-shadow(0 0 4px #06b6d4); }
+  50% { opacity: 0.95; filter: drop-shadow(0 0 14px #06b6d4); }
+}
+.animate-neural-glow {
+  animation: neural-glow 3s ease-in-out infinite;
+}
