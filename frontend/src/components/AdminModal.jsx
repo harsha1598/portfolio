@@ -952,7 +952,7 @@ export default function AdminModal({
                             subtitle: 'Scalable Platform',
                             description: 'Detailed project description...',
                             tech_stack: 'Python, FastAPI, React JS',
-                            github_url: 'https://github.com/harsha1598',
+                            github_url: 'https://github.com/harsha-reddi1',
                             live_url: '',
                             highlights: JSON.stringify(['Feature 1', 'Feature 2']),
                             featured: true,

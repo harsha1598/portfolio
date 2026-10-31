@@ -313,7 +313,7 @@ def seed_database(db: Session, force: bool = False):
         ),
         years_experience=5,
         linkedin_url="https://linkedin.com",
-        github_url="https://github.com",
+        github_url="https://github.com/harsha-reddi1",
         hackerrank_url="https://hackerrank.com",
         x_url="https://x.com",
         leetcode_url="https://leetcode.com",
@@ -378,7 +378,7 @@ def seed_database(db: Session, force: bool = False):
             subtitle="High-Throughput Analytics Service",
             description="Distributed ingestion pipeline supporting real-time event aggregation and analytical processing.",
             tech_stack="Python, FastAPI, Redis, Docker",
-            github_url="https://github.com",
+            github_url="https://github.com/harsha-reddi1",
             live_url="",
             highlights=json.dumps([
                 "Sub-50ms ingestion latency for distributed telemetry.",
@@ -392,7 +392,7 @@ def seed_database(db: Session, force: bool = False):
             subtitle="Secure Multi-Tenant Dashboard",
             description="Comprehensive administrative platform featuring role-based access control, analytics charts, and dynamic workflows.",
             tech_stack="React JS, Tailwind CSS, FastAPI, SQLite",
-            github_url="https://github.com",
+            github_url="https://github.com/harsha-reddi1",
             live_url="",
             highlights=json.dumps([
                 "JWT authentication and automated audit logging.",

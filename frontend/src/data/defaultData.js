@@ -9,7 +9,7 @@ export const defaultPortfolioData = {
     summary:
       "Software developer with extensive experience in building scalable applications, data pipelines, cloud microservices, and modern web platforms. Skilled in backend optimization and engineering leadership.",
     linkedin_url: "https://linkedin.com",
-    github_url: "https://github.com",
+    github_url: "https://github.com/harsha-reddi1",
     hackerrank_url: "https://hackerrank.com",
     x_url: "https://x.com",
     leetcode_url: "https://leetcode.com",
