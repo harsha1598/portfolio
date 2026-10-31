@@ -6,6 +6,166 @@ from typing import List
 
 from sqlalchemy.orm import Session
 from .auth import hash_password
+
+POST1_CONTENT = """# Never Let the LLM Do the Math: A Practical Guide to Grounded Generation
+
+*Patterns for building trustworthy LLM features on top of real data*
+
+## Introduction
+LLMs write fluent text, but fluency is not accuracy. In a data product, a single invented number in an AI-generated summary can undermine user trust. This post covers practical patterns for keeping LLM output grounded in real data.
+
+## Principle: the model explains, the server computes
+Treat the LLM as a writer, not a calculator.
+- Compute all metrics in your backend or data layer.
+- Pass the results to the model as structured input.
+- Instruct the model to use only the supplied values.
+
+```json
+{
+  "metric": "weekly_spend",
+  "current": 1240.50,
+  "previous": 1105.20,
+  "change_pct": 12.2
+}
+```
+
+## Validate the output
+A prompt is a request, not a guarantee. Enforce the rule in code:
+1. Extract every number from the generated text.
+2. Check that each one maps to a value you supplied (allowing for rounding and formatting).
+3. If any figure is unmatched, reject the output and retry, with a capped retry count.
+
+```python
+def is_grounded(text: str, allowed: set[float]) -> bool:
+    found = extract_numbers(text)
+    return all(any(matches(n, a) for a in allowed) for n in found)
+```
+
+## Cache by input hash
+Generation is deterministic with respect to its inputs only if you make it so. Hash the structured input (plus the prompt version and model name) and use it as the cache key.
+- Same input means same cached output.
+- Each unique input costs one model call.
+- Include the prompt version in the key so prompt changes invalidate stale entries.
+
+## Test with an LLM as judge
+Prompts and agents change often, and manual review does not scale. Build a regression harness:
+- Keep a fixed set of representative inputs.
+- Have a judge model score outputs on criteria such as accuracy, relevance and tone.
+- Track latency alongside quality.
+- Accept a change only if scores hold or improve.
+
+Calibrate the judge against human-labeled examples first, and use a different model family for judging when possible to reduce self-preference bias.
+
+## Route models by task
+Not every call needs your strongest model.
+- **Fast, cheap models** for high-volume work such as classification, extraction and short summaries.
+- **Stronger models** for multi-step reasoning and tool-heavy agents.
+- A gateway such as LiteLLM gives you one interface and makes routing a config change.
+
+Also trim what you send. Strip unused fields from API responses before they reach the model, since fewer tokens means lower cost and less distraction.
+
+## Reduce agent latency
+- **Prompt caching** for long, stable system prompts and tool definitions.
+- **Parallel tool calls** when the calls are independent.
+- **Token caps** so one runaway response doesn't stall the request.
+
+## Guardrails for generated content
+If your system publishes LLM-written text or AI images automatically, add a gate:
+- Screen images with a vision model before publishing.
+- **Fail closed:** if the check fails or errors, publish nothing.
+- Run generation in a queued background job so slow model calls never block your main application.
+
+## Checklist
+1. Compute numbers server-side, never in the model.
+2. Validate every figure in the output.
+3. Cache on a hash of input, prompt version and model.
+4. Gate changes with an automated judge.
+5. Route by task and trim your inputs.
+6. When a safety check errors, fail closed.
+
+*How do you keep your LLM outputs grounded? Share your approach in the comments.*"""
+
+POST2_CONTENT = """# Fast, Safe, Reliable APIs: Postgres, Sketches, Streaming and Security
+
+*Backend patterns for analytics-style APIs on FastAPI, PostgreSQL and BigQuery*
+
+## Introduction
+Analytics APIs face a familiar mix of problems: slow queries, expensive distinct counts, heavy payloads and strict data-privacy needs. Here are five patterns that address them.
+
+## 1. Let the query plan choose your indexes
+Don't guess. Read the plan.
+
+```sql
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT * FROM transactions
+WHERE merchant_id = 42 AND txn_date >= '2026-01-01';
+```
+
+What to look for:
+- Sequential scans on large tables.
+- Large gaps between estimated and actual row counts.
+- Expensive sorts that an index could satisfy.
+
+Tips:
+- Match composite index column order to your filters and sort.
+- Use partial indexes when queries target a known subset.
+- Build indexes with `CREATE INDEX CONCURRENTLY` to avoid locking writes.
+- Use a shared connection pool (for example PgBouncer or your driver's pool) instead of opening a connection per request.
+
+## 2. Count distinct users with HyperLogLog
+Exact distinct counts across overlapping groups are expensive. A shopper who visits several stores must be counted once in an area total, and you can't just add per-store counts.
+
+**HyperLogLog (HLL)** is a probabilistic sketch that estimates distinct counts in small, fixed memory, with a small, predictable error.
+- Sketches can be **merged**, so you can combine per-store sketches into an area-level count without double counting.
+- Precompute sketches per location, then union them at query time for radius, trade-area or zip-code queries.
+- The trade-off is approximate answers, which is usually fine for analytics but not for billing.
+
+## 3. Shrink payloads
+- Enable gzip (or brotli) compression for large JSON responses.
+- Return only the fields clients need.
+- Paginate large result sets.
+
+## 4. Design analytics APIs with honesty built in
+- **Driver breakdowns** explain why a metric moved, not just that it moved.
+- **Confidence handling:** suppress or flag results from samples too small to be reliable.
+- **Privacy thresholds:** enforce a minimum group size so small cohorts can't identify individuals.
+- **Log hygiene:** keep personal data out of logs.
+
+## 5. Authorization: explicit beats implicit
+A common failure is a wildcard or overly broad grant that accidentally passes admin checks.
+- Define a dedicated permission per endpoint.
+- Deny by default.
+- Enforce coverage with automated tests that fail when a route has no explicit permission.
+
+```python
+@router.get("/reports", dependencies=[Depends(require("reports:read"))])
+async def get_reports(): ...
+```
+
+## 6. Reliability patterns
+- **Exactly-once notifications:** use idempotency keys or an outbox pattern so retries don't duplicate messages.
+- **Safe upserts:** use `INSERT ... ON CONFLICT` with a proper unique constraint so concurrent writers don't collide.
+- **Streaming uploads:** process files in chunks instead of loading them fully into memory.
+
+```python
+async def save_upload(file: UploadFile, dest):
+    while chunk := await file.read(1024 * 1024):
+        dest.write(chunk)
+```
+
+- **Migration checks in CI:** detect multiple migration heads or conflicting changes before merge, not at deploy time.
+
+## Checklist
+1. Read query plans before adding indexes.
+2. Use mergeable sketches for distinct counts.
+3. Compress and trim responses.
+4. Build privacy and confidence rules into the API.
+5. Give every endpoint its own tested permission.
+6. Make writes idempotent and uploads streaming.
+7. Catch migration conflicts in CI.
+
+*What backend bottleneck surprised you most? Tell me in the comments.*"""
+
 from .models import (
     AdminUser,
     Award,
@@ -461,103 +621,12 @@ def seed_database(db: Session, force: bool = False):
     )
 
     # Ensure technical blog posts exist
-    posts_to_seed = [
-        {
-            "title": "Building Scalable Cloud & Data Architectures",
-            "slug": "building-scalable-cloud-data-architectures",
-            "excerpt": "Insights into engineering enterprise-grade data platforms, real-time analytics, and high-performance services.",
-            "content": "### Engineering Scalable Systems
-
-Modern distributed applications require a balanced combination of resilient infrastructure, low-latency APIs, and automated data pipelines.
-
-#### Key Architectural Pillars
-- **Distributed Storage & Streaming:** Leveraging Kafka, Redis, and cloud data warehouses.
-- **Stateless Microservices:** Built with FastAPI and containerized on Kubernetes.
-- **Observability & Health Checks:** Proactive metrics, distributed tracing, and automated failure recovery.",
-            "tags": "Data Engineering, Cloud Architecture, Python",
-            "cover_image": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80",
-        },
+    for p_info in [
         {
             "title": "Never Let the LLM Do the Math: A Practical Guide to Grounded Generation",
             "slug": "never-let-the-llm-do-the-math",
             "excerpt": "Patterns for building trustworthy LLM features on top of real data",
-            "content": '# Never Let the LLM Do the Math: A Practical Guide to Grounded Generation
-
-*Patterns for building trustworthy LLM features on top of real data*
-
-## Introduction
-LLMs write fluent text, but fluency is not accuracy. In a data product, a single invented number in an AI-generated summary can undermine user trust. This post covers practical patterns for keeping LLM output grounded in real data.
-
-## Principle: the model explains, the server computes
-Treat the LLM as a writer, not a calculator.
-- Compute all metrics in your backend or data layer.
-- Pass the results to the model as structured input.
-- Instruct the model to use only the supplied values.
-
-```json
-{
-  "metric": "weekly_spend",
-  "current": 1240.50,
-  "previous": 1105.20,
-  "change_pct": 12.2
-}
-```
-
-## Validate the output
-A prompt is a request, not a guarantee. Enforce the rule in code:
-1. Extract every number from the generated text.
-2. Check that each one maps to a value you supplied (allowing for rounding and formatting).
-3. If any figure is unmatched, reject the output and retry, with a capped retry count.
-
-```python
-def is_grounded(text: str, allowed: set[float]) -> bool:
-    found = extract_numbers(text)
-    return all(any(matches(n, a) for a in allowed) for n in found)
-```
-
-## Cache by input hash
-Generation is deterministic with respect to its inputs only if you make it so. Hash the structured input (plus the prompt version and model name) and use it as the cache key.
-- Same input means same cached output.
-- Each unique input costs one model call.
-- Include the prompt version in the key so prompt changes invalidate stale entries.
-
-## Test with an LLM as judge
-Prompts and agents change often, and manual review does not scale. Build a regression harness:
-- Keep a fixed set of representative inputs.
-- Have a judge model score outputs on criteria such as accuracy, relevance and tone.
-- Track latency alongside quality.
-- Accept a change only if scores hold or improve.
-
-Calibrate the judge against human-labeled examples first, and use a different model family for judging when possible to reduce self-preference bias.
-
-## Route models by task
-Not every call needs your strongest model.
-- **Fast, cheap models** for high-volume work such as classification, extraction and short summaries.
-- **Stronger models** for multi-step reasoning and tool-heavy agents.
-- A gateway such as LiteLLM gives you one interface and makes routing a config change.
-
-Also trim what you send. Strip unused fields from API responses before they reach the model, since fewer tokens means lower cost and less distraction.
-
-## Reduce agent latency
-- **Prompt caching** for long, stable system prompts and tool definitions.
-- **Parallel tool calls** when the calls are independent.
-- **Token caps** so one runaway response doesn\'t stall the request.
-
-## Guardrails for generated content
-If your system publishes LLM-written text or AI images automatically, add a gate:
-- Screen images with a vision model before publishing.
-- **Fail closed:** if the check fails or errors, publish nothing.
-- Run generation in a queued background job so slow model calls never block your main application.
-
-## Checklist
-1. Compute numbers server-side, never in the model.
-2. Validate every figure in the output.
-3. Cache on a hash of input, prompt version and model.
-4. Gate changes with an automated judge.
-5. Route by task and trim your inputs.
-6. When a safety check errors, fail closed.
-
-*How do you keep your LLM outputs grounded? Share your approach in the comments.*',
+            "content": POST1_CONTENT,
             "tags": "GenAI, LLM, RAG, MCP, Prompt Caching, LiteLLM, AI Engineering",
             "cover_image": "https://images.unsplash.com/photo-1677442136019-21780efad99a?auto=format&fit=crop&w=1200&q=80",
         },
@@ -565,100 +634,78 @@ If your system publishes LLM-written text or AI images automatically, add a gate
             "title": "Fast, Safe, Reliable APIs: Postgres, Sketches, Streaming and Security",
             "slug": "fast-safe-reliable-apis-postgres-sketches-streaming-and-security",
             "excerpt": "Backend patterns for analytics-style APIs on FastAPI, PostgreSQL and BigQuery",
-            "content": '# Fast, Safe, Reliable APIs: Postgres, Sketches, Streaming and Security
-
-*Backend patterns for analytics-style APIs on FastAPI, PostgreSQL and BigQuery*
-
-## Introduction
-Analytics APIs face a familiar mix of problems: slow queries, expensive distinct counts, heavy payloads and strict data-privacy needs. Here are five patterns that address them.
-
-## 1. Let the query plan choose your indexes
-Don\'t guess. Read the plan.
-
-```sql
-EXPLAIN (ANALYZE, BUFFERS)
-SELECT * FROM transactions
-WHERE merchant_id = 42 AND txn_date >= \'2026-01-01\';
-```
-
-What to look for:
-- Sequential scans on large tables.
-- Large gaps between estimated and actual row counts.
-- Expensive sorts that an index could satisfy.
-
-Tips:
-- Match composite index column order to your filters and sort.
-- Use partial indexes when queries target a known subset.
-- Build indexes with `CREATE INDEX CONCURRENTLY` to avoid locking writes.
-- Use a shared connection pool (for example PgBouncer or your driver\'s pool) instead of opening a connection per request.
-
-## 2. Count distinct users with HyperLogLog
-Exact distinct counts across overlapping groups are expensive. A shopper who visits several stores must be counted once in an area total, and you can\'t just add per-store counts.
-
-**HyperLogLog (HLL)** is a probabilistic sketch that estimates distinct counts in small, fixed memory, with a small, predictable error.
-- Sketches can be **merged**, so you can combine per-store sketches into an area-level count without double counting.
-- Precompute sketches per location, then union them at query time for radius, trade-area or zip-code queries.
-- The trade-off is approximate answers, which is usually fine for analytics but not for billing.
-
-## 3. Shrink payloads
-- Enable gzip (or brotli) compression for large JSON responses.
-- Return only the fields clients need.
-- Paginate large result sets.
-
-## 4. Design analytics APIs with honesty built in
-- **Driver breakdowns** explain why a metric moved, not just that it moved.
-- **Confidence handling:** suppress or flag results from samples too small to be reliable.
-- **Privacy thresholds:** enforce a minimum group size so small cohorts can\'t identify individuals.
-- **Log hygiene:** keep personal data out of logs.
-
-## 5. Authorization: explicit beats implicit
-A common failure is a wildcard or overly broad grant that accidentally passes admin checks.
-- Define a dedicated permission per endpoint.
-- Deny by default.
-- Enforce coverage with automated tests that fail when a route has no explicit permission.
-
-```python
-@router.get("/reports", dependencies=[Depends(require("reports:read"))])
-async def get_reports(): ...
-```
-
-## 6. Reliability patterns
-- **Exactly-once notifications:** use idempotency keys or an outbox pattern so retries don\'t duplicate messages.
-- **Safe upserts:** use `INSERT ... ON CONFLICT` with a proper unique constraint so concurrent writers don\'t collide.
-- **Streaming uploads:** process files in chunks instead of loading them fully into memory.
-
-```python
-async def save_upload(file: UploadFile, dest):
-    while chunk := await file.read(1024 * 1024):
-        dest.write(chunk)
-```
-
-- **Migration checks in CI:** detect multiple migration heads or conflicting changes before merge, not at deploy time.
-
-## Checklist
-1. Read query plans before adding indexes.
-2. Use mergeable sketches for distinct counts.
-3. Compress and trim responses.
-4. Build privacy and confidence rules into the API.
-5. Give every endpoint its own tested permission.
-6. Make writes idempotent and uploads streaming.
-7. Catch migration conflicts in CI.
-
-*What backend bottleneck surprised you most? Tell me in the comments.*',
+            "content": POST2_CONTENT,
             "tags": "PostgreSQL, FastAPI, BigQuery, HyperLogLog, API Security, Backend Engineering, Performance",
             "cover_image": "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1200&q=80",
         },
-    ]
-    for p_info in posts_to_seed:
-        existing_post = db.query(BlogPost).filter(BlogPost.slug == p_info["slug"]).first()
-        if not existing_post:
-            db.add(BlogPost(
-                title=p_info["title"],
-                slug=p_info["slug"],
-                excerpt=p_info["excerpt"],
-                content=p_info["content"],
-                tags=p_info["tags"],
-                cover_image=p_info["cover_image"],
-                is_published=True,
-            ))
+    ]:
+        if not db.query(BlogPost).filter(BlogPost.slug == p_info["slug"]).first():
+            db.add(BlogPost(**p_info, is_published=True))
             db.commit()
+
+    if not db.query(AiInsight).first():
+        db.add_all([
+            AiInsight(
+                section_key="engineering_philosophy",
+                title="Engineering Philosophy & Focus",
+                subtitle="Architectural Principles & Software Craftsmanship",
+                content=json.dumps({
+                    "title": "Engineering Philosophy & Focus",
+                    "subtitle": "Architectural Principles & Software Craftsmanship",
+                    "content": "I believe in building software that balances high throughput with resilient, maintainable architecture. Rather than introducing premature complexity, I focus on clean service boundaries, end-to-end data integrity, and deterministic latency. Whether modernizing distributed data pipelines or engineering responsive microservices, my focus is on delivering reliable production systems that scale gracefully under real-world demand.",
+                    "principles": [
+                        "Pragmatic Architecture: Prioritizing clean boundaries, observability, and simplicity over resume-driven complexity.",
+                        "Latency & Performance Obsession: Profiling queries, caching critical paths, and tuning async event loops for sub-second responses.",
+                        "End-to-End Ownership: Deep commitment from distributed cloud infrastructure and CI/CD automation to polished client experiences."
+                    ]
+                }),
+                display_order=1
+            ),
+            AiInsight(
+                section_key="architecture_highlights",
+                title="System Architecture & Production Milestones",
+                subtitle="Scalability, Distributed Pipelines & Low-Latency Performance",
+                content=json.dumps({
+                    "title": "System Architecture & Production Milestones",
+                    "subtitle": "Scalability, Distributed Pipelines & Low-Latency Performance",
+                    "bullets": [
+                        "Architected distributed microservices and asynchronous backend workflows leveraging Python and FastAPI, significantly cutting API response latency.",
+                        "Engineered resilient ETL ingestion pipelines handling high-volume analytical records with robust error handling and schema validation.",
+                        "Championed cloud modernization, automated CI/CD deployment pipelines, containerization, and zero-downtime deployments."
+                    ]
+                }),
+                display_order=2
+            ),
+            AiInsight(
+                section_key="domain_expertise",
+                title="Domain Expertise & What I Build",
+                subtitle="Core Specializations & Technical Vision",
+                content=json.dumps({
+                    "title": "Domain Expertise & What I Build",
+                    "subtitle": "Core Specializations & Technical Vision",
+                    "mission": "Passionate about solving complex engineering bottlenecks, designing distributed data pipelines, and building scalable cloud-native architectures that deliver high performance and exceptional reliability.",
+                    "focus_areas": [
+                        "High-Throughput Data Ingestion",
+                        "Resilient Cloud Backends & Microservices",
+                        "API Performance & Query Tuning",
+                        "Modern Reactive Interfaces & Dashboards"
+                    ],
+                    "technical_stack": [
+                        "Python / FastAPI / REST",
+                        "Cloud & Container Orchestration",
+                        "SQL & Database Query Tuning",
+                        "Distributed Event Processing",
+                        "React JS & Modern Web"
+                    ],
+                    "values": [
+                        "Sub-second API Latency",
+                        "Zero-Downtime Releases",
+                        "Strict Type Safety & Clean Contracts",
+                        "Data Integrity & Fault Tolerance"
+                    ]
+                }),
+                display_order=3
+            )
+        ])
+
+    db.commit()
