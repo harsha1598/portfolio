@@ -154,11 +154,21 @@ export const loginAdmin = async (username, password) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     });
-    const data = await res.json();
-    localStorage.setItem(AUTH_TOKEN_KEY, data.access_token);
-    return { success: true, token: data.access_token, source: 'api' };
-  } catch {
-    // Standalone fallback check
+    if (res && res.ok) {
+      const data = await res.json();
+      if (data && data.access_token) {
+        localStorage.setItem(AUTH_TOKEN_KEY, data.access_token);
+        return { success: true, token: data.access_token, source: 'api' };
+      }
+    } else if (res && (res.status === 400 || res.status === 401)) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Incorrect username or password');
+    }
+  } catch (err) {
+    if (err.message && err.message.toLowerCase().includes('password')) {
+      throw err;
+    }
+    // Standalone fallback check if API server is offline
   }
 
   // Standalone mode credentials fallback
@@ -171,7 +181,46 @@ export const loginAdmin = async (username, password) => {
   throw new Error('Invalid username or password');
 };
 
-export const getAuthToken = () => localStorage.getItem(AUTH_TOKEN_KEY);
+export const isTokenValid = (token) => {
+  if (!token || token === 'undefined' || token === 'null' || token === '') {
+    return false;
+  }
+  if (token.startsWith('mock_jwt_token_')) {
+    return true;
+  }
+  if (token.includes('.')) {
+    try {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split('')
+            .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+            .join('')
+        );
+        const payload = JSON.parse(jsonPayload);
+        if (payload.exp && Date.now() >= payload.exp * 1000) {
+          return false;
+        }
+        return true;
+      }
+    } catch {
+      return false;
+    }
+  }
+  return false;
+};
+
+export const getAuthToken = () => {
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+  if (!isTokenValid(token)) {
+    if (token) localStorage.removeItem(AUTH_TOKEN_KEY);
+    return null;
+  }
+  return token;
+};
+
 export const logoutAdmin = () => localStorage.removeItem(AUTH_TOKEN_KEY);
 
 // Fetch Messages for Admin
@@ -584,7 +633,7 @@ export const importResumeJson = async (jsonPayload) => {
 // Generate AI Insights via Backend Gemini Endpoint
 export const generateAiInsightsApi = async () => {
   const token = getAuthToken();
-  if (!token) throw new Error('Not authenticated');
+  if (!token) throw new Error('Your session has expired. Please log in again.');
   const res = await smartFetch('/admin/generate-ai-insights', {
     method: 'POST',
     headers: {
@@ -593,6 +642,10 @@ export const generateAiInsightsApi = async () => {
     },
   });
   if (!res.ok) {
+    if (res.status === 401) {
+      logoutAdmin();
+      throw new Error('Your session has expired. Please log in again.');
+    }
     const err = await res.json().catch(() => ({}));
     throw new Error(err.detail || 'Failed to generate AI insights');
   }

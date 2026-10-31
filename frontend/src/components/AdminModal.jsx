@@ -99,6 +99,8 @@ export default function AdminModal({
       if (token) {
         setIsAuthenticated(true);
         loadMessages();
+      } else {
+        setIsAuthenticated(false);
       }
     }
   }, [isOpen]);
@@ -134,6 +136,16 @@ export default function AdminModal({
       setSaveStatus({ type: 'success', text: 'Portfolio updated successfully!' });
       setTimeout(() => setSaveStatus(null), 3000);
     } catch (err) {
+      const isAuthErr = err.message && (
+        err.message.toLowerCase().includes('expired') ||
+        err.message.toLowerCase().includes('token') ||
+        err.message.toLowerCase().includes('unauthorized')
+      );
+      if (isAuthErr) {
+        logoutAdmin();
+        setIsAuthenticated(false);
+        setLoginError('Your session has expired. Please log in again.');
+      }
       setSaveStatus({ type: 'error', text: 'Failed to save: ' + err.message });
     }
   };
@@ -201,6 +213,17 @@ export default function AdminModal({
       }
       setTimeout(() => setAiRegenStatus(null), 3500);
     } catch (err) {
+      const isAuthErr = err.message && (
+        err.message.toLowerCase().includes('expired') ||
+        err.message.toLowerCase().includes('token') ||
+        err.message.toLowerCase().includes('authenticated') ||
+        err.message.toLowerCase().includes('unauthorized')
+      );
+      if (isAuthErr) {
+        logoutAdmin();
+        setIsAuthenticated(false);
+        setLoginError('Your session has expired. Please log in again to continue.');
+      }
       setAiRegenStatus({ type: 'error', text: 'Generation failed: ' + err.message });
     } finally {
       setIsRegeneratingInsights(false);
