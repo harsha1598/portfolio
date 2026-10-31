@@ -125,14 +125,17 @@ export default function Navbar({
               )}
             </div>
 
-            {/* AI Agent Button */}
+            {/* J.A.R.V.I.S. HUD Button */}
             <button
               onClick={onOpenChat}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:border-emerald-400 transition-all cursor-pointer shadow-sm hover:shadow-emerald-500/10"
-              title="Chat with AI Agent"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 hover:border-cyan-400 transition-all cursor-pointer shadow-sm hover:shadow-[0_0_15px_rgba(6,182,212,0.35)]"
+              title="Initialize J.A.R.V.I.S. AI Interface"
             >
-              <Bot className="w-3.5 h-3.5 animate-pulse" />
-              <span>Ask AI Agent</span>
+              <div className="relative w-3.5 h-3.5 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full border border-dashed border-cyan-400 animate-spin" />
+                <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              </div>
+              <span>J.A.R.V.I.S.</span>
             </button>
 
             {/* Resume Button */}
@@ -190,10 +193,13 @@ export default function Navbar({
                   setMobileMenuOpen(false);
                   onOpenChat?.();
                 }}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg cursor-pointer"
+                className="flex items-center gap-2 px-3 py-1.5 text-xs font-mono font-semibold bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded-lg cursor-pointer"
               >
-                <Bot className="w-3.5 h-3.5" />
-                <span>Ask AI Agent</span>
+                <div className="relative w-3.5 h-3.5 flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full border border-dashed border-cyan-400 animate-spin" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                </div>
+                <span>J.A.R.V.I.S.</span>
               </button>
               <a
                 href="#contact"

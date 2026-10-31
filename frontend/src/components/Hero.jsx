@@ -152,13 +152,16 @@ export default function Hero({
 
             <button
               onClick={onOpenChat}
-              className="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl font-semibold text-emerald-300 bg-slate-900/90 hover:bg-slate-800 border-2 border-emerald-500/40 hover:border-emerald-400 transition-all shadow-lg shadow-emerald-500/10 hover:scale-105 cursor-pointer group"
+              className="inline-flex items-center gap-3 px-6 py-3 rounded-xl font-semibold text-cyan-300 bg-[#050811]/90 hover:bg-[#070d1e] border-2 border-cyan-500/50 hover:border-cyan-400 transition-all shadow-[0_0_25px_rgba(6,182,212,0.25)] hover:shadow-[0_0_40px_rgba(6,182,212,0.5)] hover:scale-105 cursor-pointer group"
             >
-              <Bot className="w-5 h-5 text-emerald-400 group-hover:rotate-12 transition-transform" />
-              <span>Ask AI Agent</span>
+              <div className="relative w-5 h-5 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full border border-dashed border-cyan-400 animate-spin" />
+                <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
+              </div>
+              <span className="font-mono tracking-wider">Initialize J.A.R.V.I.S.</span>
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
               </span>
             </button>
 
