@@ -44,6 +44,7 @@ import {
   createBlogPost,
   updateBlogPost,
   deleteBlogPost,
+  generateAiInsightsApi,
 } from '../services/api';
 
 export default function AdminModal({
@@ -76,6 +77,10 @@ export default function AdminModal({
     is_published: true,
   });
   const [previewMode, setPreviewMode] = useState(false);
+
+  // AI insights state
+  const [isRegeneratingInsights, setIsRegeneratingInsights] = useState(false);
+  const [aiRegenStatus, setAiRegenStatus] = useState(null);
 
   // Local editable copy of data
   const [dataCopy, setDataCopy] = useState(null);
@@ -160,6 +165,45 @@ export default function AdminModal({
       }
     } catch (err) {
       setImportStatus({ type: 'error', text: 'Invalid JSON: ' + err.message });
+    }
+  };
+
+  const handleRegenerateAiInsights = async () => {
+    setIsRegeneratingInsights(true);
+    setAiRegenStatus({ type: 'loading', text: 'Generating fresh AI insights via Gemini 3.5 Flash...' });
+    try {
+      if (isApiOnline) {
+        const res = await generateAiInsightsApi();
+        if (res && res.ai_insights) {
+          const updated = { ...dataCopy, ai_insights: res.ai_insights };
+          setDataCopy(updated);
+          onDataUpdate(updated);
+          setAiRegenStatus({ type: 'success', text: 'AI insights generated and saved successfully!' });
+        } else {
+          setAiRegenStatus({ type: 'success', text: res.message || 'AI insights generated!' });
+        }
+      } else {
+        const parsed = parseResumeJson({
+          basics: {
+            name: dataCopy?.profile?.name,
+            headline: dataCopy?.profile?.title,
+          },
+          sections: {
+            experience: { items: dataCopy?.experiences || [] },
+            skills: { items: dataCopy?.skills || [] },
+            projects: { items: dataCopy?.projects || [] },
+          },
+        });
+        const updated = { ...dataCopy, ai_insights: parsed.ai_insights };
+        setDataCopy(updated);
+        onDataUpdate(updated);
+        setAiRegenStatus({ type: 'success', text: 'Local AI insights generated and saved!' });
+      }
+      setTimeout(() => setAiRegenStatus(null), 3500);
+    } catch (err) {
+      setAiRegenStatus({ type: 'error', text: 'Generation failed: ' + err.message });
+    } finally {
+      setIsRegeneratingInsights(false);
     }
   };
 
@@ -466,6 +510,23 @@ export default function AdminModal({
               >
                 <FileJson className="w-4 h-4 text-emerald-400" />
                 <span>Import Resume JSON</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('ai-insights')}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
+                  activeTab === 'ai-insights'
+                    ? 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-900'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Sparkles className="w-4 h-4 text-purple-400" />
+                  <span>AI Insights</span>
+                </div>
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-purple-500/20 text-purple-300 font-mono">
+                  Gemini
+                </span>
               </button>
 
               <button
@@ -1351,6 +1412,145 @@ export default function AdminModal({
                         <span>Copy JSON for Vercel Environment</span>
                       </button>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB: AI Insights & Summaries */}
+              {activeTab === 'ai-insights' && (
+                <div className="space-y-6 animate-fadeIn">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-800">
+                    <div>
+                      <div className="flex items-center gap-2 text-purple-400 text-xs font-mono mb-1">
+                        <Sparkles className="w-4 h-4" />
+                        <span>LLM-Generated Intelligence</span>
+                      </div>
+                      <h3 className="font-bold text-lg text-white">AI Insights & Executive Summaries</h3>
+                      <p className="text-xs text-slate-400 font-mono mt-0.5">
+                        Synthesized summaries, architectural impact, and recruiter takeaways generated via Gemini 3.5 Flash
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={isRegeneratingInsights}
+                        onClick={handleRegenerateAiInsights}
+                        className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 disabled:opacity-50 transition-all cursor-pointer shadow-md shadow-purple-500/20"
+                      >
+                        <Sparkles className={`w-3.5 h-3.5 ${isRegeneratingInsights ? 'animate-spin' : ''}`} />
+                        <span>{isRegeneratingInsights ? 'Synthesizing...' : 'Regenerate via Gemini'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSaveAll()}
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-all cursor-pointer shadow-md shadow-emerald-500/20"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>Save Changes</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {aiRegenStatus && (
+                    <div
+                      className={`p-3.5 rounded-xl border text-xs font-mono flex items-center gap-2.5 ${
+                        aiRegenStatus.type === 'success'
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                          : aiRegenStatus.type === 'error'
+                          ? 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                          : 'bg-purple-500/10 border-purple-500/30 text-purple-400'
+                      }`}
+                    >
+                      <Sparkles className="w-4 h-4 shrink-0 animate-pulse" />
+                      <span>{aiRegenStatus.text}</span>
+                    </div>
+                  )}
+
+                  {/* AI Insights List / Editor */}
+                  <div className="space-y-4">
+                    {(!dataCopy?.ai_insights || dataCopy.ai_insights.length === 0) ? (
+                      <div className="p-8 rounded-2xl bg-slate-900/40 border border-slate-800 text-center">
+                        <Sparkles className="w-8 h-8 text-purple-400 mx-auto mb-2 opacity-60" />
+                        <p className="text-sm text-slate-300 font-medium">No AI Insights Generated Yet</p>
+                        <p className="text-xs text-slate-500 mt-1 mb-4">
+                          Click below to synthesize executive summaries and architectural pillars using Gemini.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleRegenerateAiInsights}
+                          className="px-4 py-2 rounded-xl text-xs font-semibold bg-purple-600 text-white hover:bg-purple-500 cursor-pointer"
+                        >
+                          Generate AI Insights Now
+                        </button>
+                      </div>
+                    ) : (
+                      dataCopy.ai_insights.map((item, index) => {
+                        return (
+                          <div
+                            key={item.id || index}
+                            className="p-5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-mono uppercase tracking-wider text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2.5 py-0.5 rounded-full">
+                                {item.section_key}
+                              </span>
+                              <span className="text-xs text-slate-500 font-mono">Order #{item.display_order || index + 1}</span>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div>
+                                <label className="block text-[11px] font-mono text-slate-400 mb-1">Section Title</label>
+                                <input
+                                  type="text"
+                                  value={item.title || ''}
+                                  onChange={(e) => {
+                                    const next = [...(dataCopy.ai_insights || [])];
+                                    next[index] = { ...next[index], title: e.target.value };
+                                    setDataCopy({ ...dataCopy, ai_insights: next });
+                                  }}
+                                  className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-purple-500 outline-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[11px] font-mono text-slate-400 mb-1">Subtitle</label>
+                                <input
+                                  type="text"
+                                  value={item.subtitle || ''}
+                                  onChange={(e) => {
+                                    const next = [...(dataCopy.ai_insights || [])];
+                                    next[index] = { ...next[index], subtitle: e.target.value };
+                                    setDataCopy({ ...dataCopy, ai_insights: next });
+                                  }}
+                                  className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-white focus:border-purple-500 outline-none"
+                                />
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-[11px] font-mono text-slate-400 mb-1">
+                                Structured JSON / Content
+                              </label>
+                              <textarea
+                                rows={5}
+                                value={
+                                  typeof item.content === 'object'
+                                    ? JSON.stringify(item.content, null, 2)
+                                    : item.content || ''
+                                }
+                                onChange={(e) => {
+                                  const next = [...(dataCopy.ai_insights || [])];
+                                  next[index] = { ...next[index], content: e.target.value };
+                                  setDataCopy({ ...dataCopy, ai_insights: next });
+                                }}
+                                className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-purple-300 focus:border-purple-500 outline-none"
+                              />
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
               )}

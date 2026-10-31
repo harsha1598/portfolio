@@ -138,4 +138,53 @@ export const defaultPortfolioData = {
       created_at: new Date().toISOString(),
     },
   ],
+  ai_insights: [
+    {
+      id: 1,
+      section_key: "executive_summary",
+      title: "AI Executive Overview",
+      subtitle: "Synthesized Candidate Caliber & Leadership",
+      content: JSON.stringify({
+        title: "AI Executive Overview",
+        subtitle: "Synthesized Candidate Caliber & Leadership",
+        content: "Accomplished software engineer with proven engineering excellence across distributed architectures, high-performance data workflows, and robust microservices. Demonstrates strong technical leadership from cloud infrastructure to client interfaces.",
+        highlights: [
+          "Enterprise track record across distributed systems and cloud platforms",
+          "Core production proficiency in Python, FastAPI, React, and cloud architectures",
+          "Proven focus on API latency reduction, query tuning, and system resiliency"
+        ]
+      }),
+      display_order: 1,
+    },
+    {
+      id: 2,
+      section_key: "architecture_highlights",
+      title: "Architectural Pillars & Technical Impact",
+      subtitle: "Core Engineering Accomplishments & Scalability",
+      content: JSON.stringify({
+        title: "Architectural Pillars & Technical Impact",
+        subtitle: "Core Engineering Accomplishments & Scalability",
+        bullets: [
+          "Architected high-throughput microservices and distributed data pipelines leveraging modern asynchronous frameworks.",
+          "Engineered resilient ETL ingestion workflows handling high-volume analytical records with sub-second performance.",
+          "Championed cloud modernization, automated CI/CD deployment pipelines, and containerization best practices."
+        ]
+      }),
+      display_order: 2,
+    },
+    {
+      id: 3,
+      section_key: "recruiter_fit",
+      title: "Recruiter & Hiring Fast-Track",
+      subtitle: "Target Roles & Production Readiness",
+      content: JSON.stringify({
+        title: "Recruiter & Hiring Fast-Track",
+        subtitle: "Target Roles & Production Readiness",
+        ideal_roles: ["Senior Software Engineer", "Lead Backend / Data Architect", "Staff Systems Engineer"],
+        superpowers: ["Full-Lifecycle Architecture", "Data Engineering & Cloud Optimization", "High-Velocity API Design"],
+        recommendation: "Ideal for senior technical roles requiring deep competence in high-scale systems and a strong record of delivering mission-critical enterprise platforms."
+      }),
+      display_order: 3,
+    },
+  ],
 };

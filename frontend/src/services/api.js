@@ -450,6 +450,73 @@ export function parseResumeJson(jsonPayload) {
     display_order: idx + 1,
   }));
 
+  // Client-side fallback AI insights synthesized from parsed profile & experiences
+  const topExps = experiences.slice(0, 3);
+  const topCompanies = topExps.map((e) => e.company).filter(Boolean);
+  const companyStr = topCompanies.length ? topCompanies.join(', ') : 'leading tech enterprises';
+  const topSkills = skills.slice(0, 6).map((s) => s.name);
+  const skillStr = topSkills.length ? topSkills.join(', ') : 'Cloud, Distributed Systems & Backend Engineering';
+  const candName = profile.name || 'Candidate';
+  const candTitle = profile.title || 'Senior Software Engineer';
+
+  const ai_insights = [
+    {
+      id: 1,
+      section_key: 'executive_summary',
+      title: 'AI Executive Overview',
+      subtitle: 'Synthesized Candidate Caliber & Leadership',
+      content: JSON.stringify({
+        title: 'AI Executive Overview',
+        subtitle: 'Synthesized Candidate Caliber & Leadership',
+        content: `${candName} is an accomplished ${candTitle} with proven engineering excellence across ${companyStr}. Known for architecting resilient distributed systems, modernizing cloud data infrastructure, and delivering robust full-lifecycle applications. Demonstrates high technical rigor from cloud backend systems to intuitive client interfaces.`,
+        highlights: [
+          `Enterprise track record across ${companyStr}`,
+          `Core production proficiency in ${skillStr}`,
+          'Proven focus on API latency reduction, query tuning, and system resiliency',
+        ],
+      }),
+      display_order: 1,
+    },
+    {
+      id: 2,
+      section_key: 'architecture_highlights',
+      title: 'Architectural Pillars & Technical Impact',
+      subtitle: 'Core Engineering Accomplishments & Scalability',
+      content: JSON.stringify({
+        title: 'Architectural Pillars & Technical Impact',
+        subtitle: 'Core Engineering Accomplishments & Scalability',
+        bullets: [
+          `Architected high-throughput microservices and distributed data pipelines leveraging ${skillStr}.`,
+          'Engineered resilient ETL ingestion workflows handling high-volume analytical records with sub-second performance.',
+          'Championed cloud modernization, automated CI/CD deployment pipelines, and containerization best practices.',
+        ],
+      }),
+      display_order: 2,
+    },
+    {
+      id: 3,
+      section_key: 'recruiter_fit',
+      title: 'Recruiter & Hiring Fast-Track',
+      subtitle: 'Target Roles & Production Readiness',
+      content: JSON.stringify({
+        title: 'Recruiter & Hiring Fast-Track',
+        subtitle: 'Target Roles & Production Readiness',
+        ideal_roles: [
+          `Senior ${candTitle.split(',')[0].trim() || 'Software Engineer'}`,
+          'Lead Backend / Data Architect',
+          'Staff Systems Engineer',
+        ],
+        superpowers: [
+          'Full-Lifecycle Architecture',
+          'Data Engineering & Cloud Optimization',
+          'High-Velocity API Design',
+        ],
+        recommendation: `Ideal for senior technical roles requiring deep competence in ${skillStr} and a strong record of delivering mission-critical enterprise systems.`,
+      }),
+      display_order: 3,
+    },
+  ];
+
   return {
     profile,
     experiences,
@@ -458,6 +525,7 @@ export function parseResumeJson(jsonPayload) {
     education,
     awards,
     certifications,
+    ai_insights,
   };
 }
 
@@ -488,6 +556,17 @@ export const importResumeJson = async (jsonPayload) => {
         body: JSON.stringify(jsonPayload),
       });
       if (res.ok) {
+        // Fetch fresh portfolio data from backend to retrieve Gemini-generated insights
+        try {
+          const freshRes = await smartFetch('/portfolio');
+          if (freshRes.ok) {
+            const freshData = await freshRes.json();
+            if (freshData && freshData.ai_insights && freshData.ai_insights.length > 0) {
+              updatedData.ai_insights = freshData.ai_insights;
+              saveLocalData(updatedData);
+            }
+          }
+        } catch {}
         return { success: true, data: updatedData, source: 'api' };
       }
     } catch (e) {
@@ -496,6 +575,37 @@ export const importResumeJson = async (jsonPayload) => {
   }
 
   return { success: true, data: updatedData, source: 'local' };
+};
+
+// Generate AI Insights via Backend Gemini Endpoint
+export const generateAiInsightsApi = async () => {
+  const token = getAuthToken();
+  if (!token) throw new Error('Not authenticated');
+  const res = await smartFetch('/admin/generate-ai-insights', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Failed to generate AI insights');
+  }
+  const result = await res.json();
+  try {
+    const freshRes = await smartFetch('/portfolio');
+    if (freshRes.ok) {
+      const freshData = await freshRes.json();
+      if (freshData && freshData.ai_insights) {
+        const local = getLocalData();
+        const updated = { ...local, ai_insights: freshData.ai_insights };
+        saveLocalData(updated);
+        return { ...result, ai_insights: freshData.ai_insights };
+      }
+    }
+  } catch {}
+  return result;
 };
 
 // Blog Posts API (Vercel API -> Local Storage Fallback)

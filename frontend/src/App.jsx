@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import About from './components/About';
+import AiInsights from './components/AiInsights';
 import Experience from './components/Experience';
 import Skills from './components/Skills';
 import Projects from './components/Projects';
@@ -133,6 +134,12 @@ export default function App() {
             experiences={portfolioData.experiences || []}
             skills={portfolioData.skills || []}
             projects={portfolioData.projects || []}
+          />
+          <AiInsights
+            aiInsights={portfolioData.ai_insights}
+            profile={portfolioData.profile}
+            experiences={portfolioData.experiences || []}
+            skills={portfolioData.skills || []}
           />
           <Experience experiences={portfolioData.experiences} />
           <Skills skills={portfolioData.skills} />

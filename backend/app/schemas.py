@@ -229,6 +229,26 @@ class BlogPostOut(BlogPostBase):
         from_attributes = True
 
 
+class AiInsightBase(BaseModel):
+    section_key: str
+    title: str
+    subtitle: Optional[str] = None
+    content: str
+    display_order: int = 0
+
+
+class AiInsightCreate(AiInsightBase):
+    pass
+
+
+class AiInsightOut(AiInsightBase):
+    id: int
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
 class PortfolioFullData(BaseModel):
     profile: Optional[ProfileOut] = None
     experiences: List[ExperienceOut] = []
@@ -238,6 +258,7 @@ class PortfolioFullData(BaseModel):
     awards: List[AwardOut] = []
     certifications: List[CertificationOut] = []
     posts: List[BlogPostOut] = []
+    ai_insights: List[AiInsightOut] = []
 
 
 class AdminLogin(BaseModel):

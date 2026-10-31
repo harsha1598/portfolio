@@ -69,8 +69,8 @@ class Skill(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(80), nullable=False)
-    category = Column(String(80), nullable=False)  # "Cloud & Data", "Languages & Backend", "Frontend", "DevOps & Tools"
-    proficiency = Column(String(50), nullable=True)  # "Advanced", "Expert", "Proficient"
+    category = Column(String(80), nullable=False)
+    proficiency = Column(String(50), nullable=True)
     display_order = Column(Integer, default=0)
 
 
@@ -120,6 +120,7 @@ class ContactMessage(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     is_read = Column(Boolean, default=False)
 
+
 class BlogPost(Base):
     __tablename__ = "blog_posts"
 
@@ -133,3 +134,15 @@ class BlogPost(Base):
     is_published = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+
+
+class AiInsight(Base):
+    __tablename__ = "ai_insights"
+
+    id = Column(Integer, primary_key=True, index=True)
+    section_key = Column(String(50), nullable=False)  # "executive_summary", "architecture_highlights", "recruiter_fit"
+    title = Column(String(150), nullable=False)
+    subtitle = Column(String(200), nullable=True)
+    content = Column(Text, nullable=False)  # JSON-encoded details or markdown text
+    display_order = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
