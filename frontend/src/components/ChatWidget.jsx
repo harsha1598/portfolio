@@ -46,7 +46,7 @@ import {
 import { sendChatMessage } from '../services/api';
 import { GithubIcon, LinkedinIcon } from './Icons';
 
-// Native Web Audio API for futuristic HUD audio cues
+// Native Web Audio API for subtle HUD audio feedback
 function playHudSound(type = 'chirp') {
   try {
     if (typeof window === 'undefined') return;
@@ -63,37 +63,35 @@ function playHudSound(type = 'chirp') {
     if (type === 'open') {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(440, now);
-      osc.frequency.exponentialRampToValueAtTime(880, now + 0.12);
-      gain.gain.setValueAtTime(0.04, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.1);
+      gain.gain.setValueAtTime(0.03, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
       osc.start(now);
-      osc.stop(now + 0.18);
+      osc.stop(now + 0.15);
     } else if (type === 'send') {
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(587.33, now);
       osc.frequency.exponentialRampToValueAtTime(1174.66, now + 0.08);
-      gain.gain.setValueAtTime(0.03, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      gain.gain.setValueAtTime(0.025, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
       osc.start(now);
-      osc.stop(now + 0.12);
+      osc.stop(now + 0.1);
     } else if (type === 'close') {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(659.25, now);
       osc.frequency.exponentialRampToValueAtTime(329.63, now + 0.1);
-      gain.gain.setValueAtTime(0.03, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+      gain.gain.setValueAtTime(0.025, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
       osc.start(now);
-      osc.stop(now + 0.14);
+      osc.stop(now + 0.12);
     }
-  } catch {
-    // Audio context may be restricted by browser policy before first interaction
-  }
+  } catch {}
 }
 
 // ---------------------------------------------------------------------------
-// 1. Interactive Radar / Spider Graph for Technical Competency
+// On-Demand Component 1: Interactive Multi-Axis Competency Radar Chart
 // ---------------------------------------------------------------------------
-function RadarSkillChart({ activeDomain, onSelectDomain }) {
+function RadarSkillChart({ activeDomain = 'backend', onSelectDomain }) {
   const domains = useMemo(
     () => [
       {
@@ -145,7 +143,6 @@ function RadarSkillChart({ activeDomain, onSelectDomain }) {
   const radius = 95;
   const numAxes = domains.length;
 
-  // Helper to compute (x, y) coordinates on radar
   const getCoordinates = (index, factor = 1) => {
     const angle = (index * 2 * Math.PI) / numAxes - Math.PI / 2;
     const r = radius * factor;
@@ -155,7 +152,6 @@ function RadarSkillChart({ activeDomain, onSelectDomain }) {
     };
   };
 
-  // Polygon points for radar rings (25%, 50%, 75%, 100%)
   const gridRings = [0.25, 0.5, 0.75, 1.0].map((factor) => {
     return domains
       .map((_, i) => {
@@ -165,7 +161,6 @@ function RadarSkillChart({ activeDomain, onSelectDomain }) {
       .join(' ');
   });
 
-  // User competency polygon points
   const polygonPoints = domains
     .map((d, i) => {
       const { x, y } = getCoordinates(i, d.score / 100);
@@ -176,7 +171,7 @@ function RadarSkillChart({ activeDomain, onSelectDomain }) {
   const currentSelection = domains.find((d) => d.id === activeDomain) || domains[0];
 
   return (
-    <div className="p-4 sm:p-5 rounded-2xl bg-[#060a17]/90 border border-cyan-500/30 shadow-[0_0_25px_rgba(6,182,212,0.15)] space-y-4">
+    <div className="p-4 sm:p-5 rounded-2xl bg-[#060a17]/90 border border-cyan-500/30 shadow-[0_0_25px_rgba(6,182,212,0.15)] space-y-4 my-2">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-cyan-500/20 pb-3">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
@@ -184,42 +179,33 @@ function RadarSkillChart({ activeDomain, onSelectDomain }) {
           </div>
           <div>
             <span className="text-xs font-mono font-bold text-cyan-300 tracking-wider">
-              ARCHITECTURAL COMPETENCY RADAR
+              COMPETENCY RADAR CHART
             </span>
             <p className="text-[10px] text-slate-400 font-mono">
-              Multi-axis proficiency matrix across core engineering domains
+              Evaluated multi-axis proficiency across 5 core engineering domains
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-cyan-950/80 border border-cyan-500/30 text-cyan-300">
-            5 AXES EVALUATED
-          </span>
-        </div>
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-cyan-950/80 border border-cyan-500/30 text-cyan-300">
+          5 AXES EVALUATED
+        </span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-        {/* SVG Radar Spider Web Canvas */}
         <div className="md:col-span-6 flex items-center justify-center relative">
-          <svg
-            viewBox="0 0 300 270"
-            className="w-full max-w-[280px] sm:max-w-[300px] h-auto overflow-visible select-none"
-          >
+          <svg viewBox="0 0 300 270" className="w-full max-w-[280px] h-auto overflow-visible select-none">
             <defs>
-              {/* Radial gradient for data polygon fill */}
               <radialGradient id="radarFillGrad" cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.65" />
                 <stop offset="70%" stopColor="#3b82f6" stopOpacity="0.35" />
                 <stop offset="100%" stopColor="#0f172a" stopOpacity="0.1" />
               </radialGradient>
-              {/* Glow filter */}
               <filter id="radarGlow" x="-20%" y="-20%" width="140%" height="140%">
                 <feGaussianBlur stdDeviation="3" result="blur" />
                 <feComposite in="SourceGraphic" in2="blur" operator="over" />
               </filter>
             </defs>
 
-            {/* Background Concentric Grid Rings */}
             {gridRings.map((pts, idx) => (
               <polygon
                 key={idx}
@@ -231,40 +217,19 @@ function RadarSkillChart({ activeDomain, onSelectDomain }) {
               />
             ))}
 
-            {/* Radar Grid Axes Lines */}
             {domains.map((_, i) => {
               const { x, y } = getCoordinates(i, 1);
-              return (
-                <line
-                  key={i}
-                  x1={cx}
-                  y1={cy}
-                  x2={x}
-                  y2={y}
-                  stroke="#1e293b"
-                  strokeWidth="1"
-                />
-              );
+              return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="#1e293b" strokeWidth="1" />;
             })}
 
-            {/* Rotating Radar Sweep Line */}
             <g className="animate-radar-sweep origin-[150px_135px]">
-              <line
-                x1={cx}
-                y1={cy}
-                x2={cx}
-                y2={cy - radius}
-                stroke="#06b6d4"
-                strokeWidth="1.5"
-                strokeOpacity="0.8"
-              />
+              <line x1={cx} y1={cy} x2={cx} y2={cy - radius} stroke="#06b6d4" strokeWidth="1.5" strokeOpacity="0.8" />
               <path
                 d={`M ${cx} ${cy} L ${cx + 35} ${cy - radius + 15} A ${radius} ${radius} 0 0 0 ${cx} ${cy - radius} Z`}
                 fill="rgba(6, 182, 212, 0.15)"
               />
             </g>
 
-            {/* Competency Area Polygon */}
             <polygon
               points={polygonPoints}
               fill="url(#radarFillGrad)"
@@ -274,7 +239,6 @@ function RadarSkillChart({ activeDomain, onSelectDomain }) {
               className="transition-all duration-700"
             />
 
-            {/* Interactive Domain Axis Nodes & Labels */}
             {domains.map((d, i) => {
               const { x, y } = getCoordinates(i, d.score / 100);
               const labelPos = getCoordinates(i, 1.25);
@@ -283,10 +247,9 @@ function RadarSkillChart({ activeDomain, onSelectDomain }) {
               return (
                 <g
                   key={d.id}
-                  onClick={() => onSelectDomain(d.id)}
+                  onClick={() => onSelectDomain?.(d.id)}
                   className="cursor-pointer group"
                 >
-                  {/* Outer pulsing ring on hover or selected */}
                   <circle
                     cx={x}
                     cy={y}
@@ -297,7 +260,6 @@ function RadarSkillChart({ activeDomain, onSelectDomain }) {
                     strokeWidth="2"
                     className="transition-all duration-300 group-hover:scale-125"
                   />
-                  {/* Center Dot */}
                   <circle
                     cx={x}
                     cy={y}
@@ -305,7 +267,6 @@ function RadarSkillChart({ activeDomain, onSelectDomain }) {
                     fill={isSelected ? '#ffffff' : d.color}
                     className="transition-all duration-300"
                   />
-                  {/* Axis Label */}
                   <text
                     x={labelPos.x}
                     y={labelPos.y}
@@ -323,24 +284,19 @@ function RadarSkillChart({ activeDomain, onSelectDomain }) {
               );
             })}
 
-            {/* Center Core Dot */}
             <circle cx={cx} cy={cy} r="3" fill="#06b6d4" />
           </svg>
         </div>
 
-        {/* Selected Domain Telemetry Cards */}
         <div className="md:col-span-6 space-y-2.5">
           <div className="p-3.5 rounded-xl bg-slate-950/80 border border-cyan-500/30">
             <div className="flex items-center justify-between">
               <span className="text-xs font-mono font-bold text-white flex items-center gap-2">
-                <span
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: currentSelection.color }}
-                />
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: currentSelection.color }} />
                 {currentSelection.name}
               </span>
               <span className="text-xs font-mono font-extrabold text-cyan-300 px-2 py-0.5 rounded bg-cyan-950 border border-cyan-500/30">
-                {currentSelection.score}% RATIO
+                {currentSelection.score}%
               </span>
             </div>
 
@@ -350,12 +306,11 @@ function RadarSkillChart({ activeDomain, onSelectDomain }) {
                 <span className="text-cyan-200">{currentSelection.tech}</span>
               </div>
               <div className="text-[11px] text-slate-400">
-                <span className="text-slate-500">TELEMETRY: </span>
+                <span className="text-slate-500">BENCHMARK: </span>
                 {currentSelection.metrics}
               </div>
             </div>
 
-            {/* Linear Score Bar */}
             <div className="mt-3 space-y-1">
               <div className="w-full h-1.5 rounded-full bg-slate-900 overflow-hidden border border-slate-800">
                 <div
@@ -369,12 +324,11 @@ function RadarSkillChart({ activeDomain, onSelectDomain }) {
             </div>
           </div>
 
-          {/* Quick Domain Selector Pills */}
           <div className="flex flex-wrap gap-1.5 pt-1">
             {domains.map((d) => (
               <button
                 key={d.id}
-                onClick={() => onSelectDomain(d.id)}
+                onClick={() => onSelectDomain?.(d.id)}
                 className={`px-2.5 py-1 rounded-lg text-[10px] font-mono transition-all border cursor-pointer ${
                   activeDomain === d.id
                     ? 'bg-cyan-500/20 text-cyan-200 border-cyan-400 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
@@ -392,30 +346,27 @@ function RadarSkillChart({ activeDomain, onSelectDomain }) {
 }
 
 // ---------------------------------------------------------------------------
-// 2. Latency & Performance Comparison Benchmark Graph
+// On-Demand Component 2: Latency Benchmark Graph
 // ---------------------------------------------------------------------------
 function LatencyBenchmarkChart() {
   const benchmarks = [
     {
-      architecture: 'Standard LLM Call (No Grounding / Caching)',
-      latency: 29.2,
-      displayLatency: '29.2s',
+      architecture: 'Standard LLM Call (No Caching)',
+      latency: '29.2s',
       color: '#f43f5e',
       barPercent: 100,
-      description: 'Full remote inference roundtrip + token streaming overhead',
+      description: 'Full remote inference roundtrip + token streaming latency',
     },
     {
       architecture: 'LiteLLM Gateway + Prompt Caching',
-      latency: 1.85,
-      displayLatency: '1.85s',
+      latency: '1.85s',
       color: '#38bdf8',
       barPercent: 16,
       description: 'Cached system prompts & model routing gateway',
     },
     {
-      architecture: 'Input Hash Cache + Server Math Grounding',
-      latency: 0.65,
-      displayLatency: '0.65s',
+      architecture: 'Input Hash Cache + Server Math Gate',
+      latency: '0.65s',
       color: '#10b981',
       barPercent: 5.5,
       description: 'Deterministic hash hits & sub-second server-verified output',
@@ -423,7 +374,7 @@ function LatencyBenchmarkChart() {
   ];
 
   return (
-    <div className="p-4 sm:p-5 rounded-2xl bg-[#060a17]/90 border border-cyan-500/30 shadow-[0_0_25px_rgba(6,182,212,0.15)] space-y-4">
+    <div className="p-4 sm:p-5 rounded-2xl bg-[#060a17]/90 border border-cyan-500/30 shadow-[0_0_25px_rgba(6,182,212,0.15)] space-y-4 my-2">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-cyan-500/20 pb-3">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
@@ -431,15 +382,15 @@ function LatencyBenchmarkChart() {
           </div>
           <div>
             <span className="text-xs font-mono font-bold text-white tracking-wider">
-              BENCHMARK: LATENCY & RESPONSE TIME GRAPH
+              LATENCY COMPARISON BENCHMARK GRAPH
             </span>
             <p className="text-[10px] text-slate-400 font-mono">
-              Empirical execution timings: Uncached vs Prompt Cached vs Input Hash Cached
+              Uncached Direct Call vs Prompt Caching vs Input Hash Caching
             </p>
           </div>
         </div>
         <span className="px-2.5 py-1 rounded-full text-xs font-mono font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-          ~45x LATENCY REDUCTION (-97.8%)
+          ~45x SPEEDUP (-97.8% LATENCY)
         </span>
       </div>
 
@@ -449,11 +400,10 @@ function LatencyBenchmarkChart() {
             <div className="flex items-center justify-between text-xs font-mono">
               <span className="text-slate-200 font-semibold">{item.architecture}</span>
               <span className="font-extrabold" style={{ color: item.color }}>
-                {item.displayLatency}
+                {item.latency}
               </span>
             </div>
 
-            {/* Horizontal Bar Visualizer */}
             <div className="relative w-full h-4 rounded-lg bg-slate-950 overflow-hidden border border-slate-800 flex items-center p-0.5">
               <div
                 className="h-full rounded-md transition-all duration-1000 shadow-[0_0_12px_rgba(6,182,212,0.3)]"
@@ -463,9 +413,7 @@ function LatencyBenchmarkChart() {
                   backgroundColor: item.color,
                 }}
               />
-              <span className="absolute right-2 text-[10px] font-mono text-slate-400">
-                {item.displayLatency}
-              </span>
+              <span className="absolute right-2 text-[10px] font-mono text-slate-400">{item.latency}</span>
             </div>
 
             <p className="text-[10px] font-mono text-slate-400 pl-1">{item.description}</p>
@@ -473,7 +421,6 @@ function LatencyBenchmarkChart() {
         ))}
       </div>
 
-      {/* Grid Footprint Marker */}
       <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono text-slate-500">
         <span>0.0s [INSTANT]</span>
         <span>10.0s</span>
@@ -485,42 +432,36 @@ function LatencyBenchmarkChart() {
 }
 
 // ---------------------------------------------------------------------------
-// 3. PostgreSQL Query Plan & Buffers Optimization Chart
+// On-Demand Component 3: PostgreSQL Query Plan Tuning Graph
 // ---------------------------------------------------------------------------
 function QueryPlanComparisonChart() {
-  const [metricTab, setMetricTab] = useState('time'); // 'time' | 'buffers' | 'cost'
+  const [metricTab, setMetricTab] = useState('time');
 
   const metricsData = {
     time: {
-      title: 'Execution Duration (ms)',
       unit: 'ms',
       before: 840,
       after: 3.2,
       reduction: '262x Faster',
-      desc: 'Wall clock time measured with EXPLAIN (ANALYZE, BUFFERS)',
     },
     buffers: {
-      title: 'Disk Buffer Page Reads',
       unit: 'pages',
       before: 14800,
       after: 42,
       reduction: '99.7% Reduction',
-      desc: 'Shared read buffer hits reduced via composite B-tree index',
     },
     cost: {
-      title: 'PostgreSQL Planner Cost Units',
       unit: 'cost units',
       before: 148200,
       after: 820,
       reduction: '99.4% Cost Drop',
-      desc: 'Query optimizer planner estimates for full query tree',
     },
   };
 
   const active = metricsData[metricTab];
 
   return (
-    <div className="p-4 sm:p-5 rounded-2xl bg-[#060a17]/90 border border-amber-500/30 shadow-[0_0_25px_rgba(245,158,11,0.15)] space-y-4">
+    <div className="p-4 sm:p-5 rounded-2xl bg-[#060a17]/90 border border-amber-500/30 shadow-[0_0_25px_rgba(245,158,11,0.15)] space-y-4 my-2">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-500/20 pb-3">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400">
@@ -536,34 +477,27 @@ function QueryPlanComparisonChart() {
           </div>
         </div>
 
-        {/* Tab Buttons */}
         <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
           <button
             onClick={() => setMetricTab('time')}
-            className={`px-2.5 py-1 rounded-lg text-[10px] font-mono transition-colors cursor-pointer ${
-              metricTab === 'time'
-                ? 'bg-amber-500/20 text-amber-300 font-bold'
-                : 'text-slate-400 hover:text-white'
+            className={`px-2.5 py-1 rounded-lg text-[10px] font-mono cursor-pointer ${
+              metricTab === 'time' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-400'
             }`}
           >
             Duration
           </button>
           <button
             onClick={() => setMetricTab('buffers')}
-            className={`px-2.5 py-1 rounded-lg text-[10px] font-mono transition-colors cursor-pointer ${
-              metricTab === 'buffers'
-                ? 'bg-amber-500/20 text-amber-300 font-bold'
-                : 'text-slate-400 hover:text-white'
+            className={`px-2.5 py-1 rounded-lg text-[10px] font-mono cursor-pointer ${
+              metricTab === 'buffers' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-400'
             }`}
           >
             Buffers
           </button>
           <button
             onClick={() => setMetricTab('cost')}
-            className={`px-2.5 py-1 rounded-lg text-[10px] font-mono transition-colors cursor-pointer ${
-              metricTab === 'cost'
-                ? 'bg-amber-500/20 text-amber-300 font-bold'
-                : 'text-slate-400 hover:text-white'
+            className={`px-2.5 py-1 rounded-lg text-[10px] font-mono cursor-pointer ${
+              metricTab === 'cost' ? 'bg-amber-500/20 text-amber-300 font-bold' : 'text-slate-400'
             }`}
           >
             Cost
@@ -571,13 +505,11 @@ function QueryPlanComparisonChart() {
         </div>
       </div>
 
-      {/* Visual Comparative Graph */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Before: Sequential Scan */}
         <div className="p-3.5 rounded-xl bg-slate-950/80 border border-rose-500/30 space-y-2">
           <div className="flex items-center justify-between text-xs font-mono">
-            <span className="text-rose-400 font-bold">1. Sequential Scan (Unindexed)</span>
-            <span className="text-[10px] text-slate-400">STATUS QUO</span>
+            <span className="text-rose-400 font-bold">1. Sequential Scan</span>
+            <span className="text-[10px] text-slate-400">UNINDEXED</span>
           </div>
           <div className="text-2xl font-mono font-extrabold text-white">
             {active.before.toLocaleString()} <span className="text-xs font-normal text-slate-400">{active.unit}</span>
@@ -585,12 +517,9 @@ function QueryPlanComparisonChart() {
           <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden">
             <div className="h-full rounded-full bg-rose-500 w-full" />
           </div>
-          <p className="text-[10px] font-mono text-slate-400">
-            Scans every row across entire disk table segment. High I/O lock.
-          </p>
+          <p className="text-[10px] font-mono text-slate-400">Scans every row across disk segment.</p>
         </div>
 
-        {/* After: Composite Index Scan */}
         <div className="p-3.5 rounded-xl bg-slate-950/80 border border-emerald-500/30 space-y-2">
           <div className="flex items-center justify-between text-xs font-mono">
             <span className="text-emerald-400 font-bold">2. Composite Index Scan</span>
@@ -607,28 +536,19 @@ function QueryPlanComparisonChart() {
               style={{ width: `${Math.max(4, (active.after / active.before) * 100)}%` }}
             />
           </div>
-          <p className="text-[10px] font-mono text-slate-400">
-            Instant B-tree seek directly on index pages. Minimal buffer page reads.
-          </p>
+          <p className="text-[10px] font-mono text-slate-400">Instant B-tree seek directly on index pages.</p>
         </div>
-      </div>
-
-      <div className="p-2.5 rounded-xl bg-amber-950/30 border border-amber-500/30 text-xs font-mono text-amber-200 flex items-center justify-between">
-        <span>SQL EXPLAIN PATTERN:</span>
-        <code className="text-[11px] text-amber-300 font-bold">
-          CREATE INDEX CONCURRENTLY idx_merchant_date ON transactions (merchant_id, txn_date);
-        </code>
       </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// 4. Memory Scaling Graph: Exact Set vs HyperLogLog Sketch
+// On-Demand Component 4: HyperLogLog Memory Scaling Graph
 // ---------------------------------------------------------------------------
 function HllMemoryChart() {
   return (
-    <div className="p-4 sm:p-5 rounded-2xl bg-[#060a17]/90 border border-emerald-500/30 shadow-[0_0_25px_rgba(16,185,129,0.15)] space-y-4">
+    <div className="p-4 sm:p-5 rounded-2xl bg-[#060a17]/90 border border-emerald-500/30 shadow-[0_0_25px_rgba(16,185,129,0.15)] space-y-4 my-2">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-500/20 pb-3">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
@@ -636,10 +556,10 @@ function HllMemoryChart() {
           </div>
           <div>
             <span className="text-xs font-mono font-bold text-white tracking-wider">
-              MEMORY SCALING: EXACT DISTINCT COUNT VS HYPERLOGLOG
+              MEMORY SCALING: EXACT SETS VS HYPERLOGLOG
             </span>
             <p className="text-[10px] text-slate-400 font-mono">
-              O(N) Linear RAM Growth vs O(1) Fixed 1.5 KB Probabilistic Register
+              O(N) Linear RAM Growth vs O(1) Fixed 1.5 KB Register
             </p>
           </div>
         </div>
@@ -648,7 +568,6 @@ function HllMemoryChart() {
         </span>
       </div>
 
-      {/* SVG Line Chart */}
       <div className="relative pt-2">
         <svg viewBox="0 0 500 180" className="w-full h-auto overflow-visible select-none">
           <defs>
@@ -662,123 +581,48 @@ function HllMemoryChart() {
             </linearGradient>
           </defs>
 
-          {/* Grid lines */}
           <line x1="50" y1="20" x2="480" y2="20" stroke="#1e293b" strokeDasharray="3 3" />
           <line x1="50" y1="65" x2="480" y2="65" stroke="#1e293b" strokeDasharray="3 3" />
           <line x1="50" y1="110" x2="480" y2="110" stroke="#1e293b" strokeDasharray="3 3" />
           <line x1="50" y1="155" x2="480" y2="155" stroke="#334155" />
 
-          {/* Y Axis Labels */}
-          <text x="42" y="24" fill="#94a3b8" fontSize="9" fontFamily="monospace" textAnchor="end">
-            128MB
-          </text>
-          <text x="42" y="69" fill="#94a3b8" fontSize="9" fontFamily="monospace" textAnchor="end">
-            64MB
-          </text>
-          <text x="42" y="114" fill="#94a3b8" fontSize="9" fontFamily="monospace" textAnchor="end">
-            16MB
-          </text>
-          <text x="42" y="157" fill="#94a3b8" fontSize="9" fontFamily="monospace" textAnchor="end">
-            1.5KB
-          </text>
+          <text x="42" y="24" fill="#94a3b8" fontSize="9" fontFamily="monospace" textAnchor="end">128MB</text>
+          <text x="42" y="69" fill="#94a3b8" fontSize="9" fontFamily="monospace" textAnchor="end">64MB</text>
+          <text x="42" y="114" fill="#94a3b8" fontSize="9" fontFamily="monospace" textAnchor="end">16MB</text>
+          <text x="42" y="157" fill="#94a3b8" fontSize="9" fontFamily="monospace" textAnchor="end">1.5KB</text>
 
-          {/* Exact Set Cardinality Curve (Soaring upwards) */}
-          <path
-            d="M 50 155 Q 260 140, 480 25 L 480 155 L 50 155 Z"
-            fill="url(#exactGrad)"
-          />
-          <path
-            d="M 50 155 Q 260 140, 480 25"
-            fill="none"
-            stroke="#f43f5e"
-            strokeWidth="2.5"
-          />
+          <path d="M 50 155 Q 260 140, 480 25 L 480 155 L 50 155 Z" fill="url(#exactGrad)" />
+          <path d="M 50 155 Q 260 140, 480 25" fill="none" stroke="#f43f5e" strokeWidth="2.5" />
 
-          {/* HyperLogLog Flat Curve (Pinned at bottom 1.5KB) */}
-          <path
-            d="M 50 152 L 480 152 L 480 155 L 50 155 Z"
-            fill="url(#hllGrad)"
-          />
-          <line
-            x1="50"
-            y1="152"
-            x2="480"
-            y2="152"
-            stroke="#10b981"
-            strokeWidth="3"
-            filter="drop-shadow(0 0 6px #10b981)"
-          />
+          <path d="M 50 152 L 480 152 L 480 155 L 50 155 Z" fill="url(#hllGrad)" />
+          <line x1="50" y1="152" x2="480" y2="152" stroke="#10b981" strokeWidth="3" filter="drop-shadow(0 0 6px #10b981)" />
 
-          {/* Glowing Markers */}
           <circle cx="480" cy="25" r="4.5" fill="#f43f5e" />
           <circle cx="480" cy="152" r="5" fill="#10b981" />
 
-          {/* Annotation Badge on HLL Line */}
           <g transform="translate(320, 125)">
-            <rect
-              width="150"
-              height="20"
-              rx="4"
-              fill="#064e3b"
-              stroke="#10b981"
-              strokeWidth="1"
-            />
-            <text
-              x="75"
-              y="13"
-              fill="#a7f3d0"
-              fontSize="9"
-              fontFamily="monospace"
-              fontWeight="bold"
-              textAnchor="middle"
-            >
+            <rect width="150" height="20" rx="4" fill="#064e3b" stroke="#10b981" strokeWidth="1" />
+            <text x="75" y="13" fill="#a7f3d0" fontSize="9" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
               HLL CONSTANT 1.5 KB
             </text>
           </g>
 
-          {/* X Axis Labels */}
-          <text x="50" y="172" fill="#64748b" fontSize="9" fontFamily="monospace" textAnchor="middle">
-            10K
-          </text>
-          <text x="155" y="172" fill="#64748b" fontSize="9" fontFamily="monospace" textAnchor="middle">
-            100K
-          </text>
-          <text x="265" y="172" fill="#64748b" fontSize="9" fontFamily="monospace" textAnchor="middle">
-            1M
-          </text>
-          <text x="375" y="172" fill="#64748b" fontSize="9" fontFamily="monospace" textAnchor="middle">
-            10M
-          </text>
-          <text x="480" y="172" fill="#64748b" fontSize="9" fontFamily="monospace" textAnchor="middle">
-            50M+ ITEMS
-          </text>
+          <text x="50" y="172" fill="#64748b" fontSize="9" fontFamily="monospace" textAnchor="middle">10K</text>
+          <text x="155" y="172" fill="#64748b" fontSize="9" fontFamily="monospace" textAnchor="middle">100K</text>
+          <text x="265" y="172" fill="#64748b" fontSize="9" fontFamily="monospace" textAnchor="middle">1M</text>
+          <text x="375" y="172" fill="#64748b" fontSize="9" fontFamily="monospace" textAnchor="middle">10M</text>
+          <text x="480" y="172" fill="#64748b" fontSize="9" fontFamily="monospace" textAnchor="middle">50M+ ITEMS</text>
         </svg>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs font-mono">
-        <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-          <span className="text-slate-400">KEY CAPABILITY:</span>
-          <p className="text-slate-200 mt-0.5">
-            Sketches can be <span className="text-emerald-400 font-bold">unioned together</span> at query time across
-            locations or dates without recounting rows.
-          </p>
-        </div>
-        <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-          <span className="text-slate-400">ENGINEERING TRADEOFF:</span>
-          <p className="text-slate-200 mt-0.5">
-            Approximate count with a fixed ~1.04/√m standard error (perfect for analytics, not for financial billing).
-          </p>
-        </div>
       </div>
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// 5. Interactive System Architecture Pipeline Graph
+// On-Demand Component 5: Interactive System Architecture Flow Graph
 // ---------------------------------------------------------------------------
 function ArchitectureFlowGraph() {
-  const [activeStep, setActiveStep] = useState(2); // 0 to 4
+  const [activeStep, setActiveStep] = useState(2);
 
   const steps = [
     {
@@ -786,8 +630,7 @@ function ArchitectureFlowGraph() {
       title: 'Inbound Client Request',
       label: '1. API Call',
       tag: 'FASTAPI / REST',
-      detail:
-        'Client requests analytical summaries with strict latency SLA and payload compression.',
+      detail: 'Client requests analytical summaries with strict latency SLA and payload compression.',
       pattern: 'Gzip/Brotli payload compression + Bearer authentication gate',
     },
     {
@@ -795,8 +638,7 @@ function ArchitectureFlowGraph() {
       title: 'LiteLLM Gateway & Cost Router',
       label: '2. Cost Router',
       tag: 'GATEWAY ROUTER',
-      detail:
-        'Routes lightweight extraction tasks to fast models, reserving reasoning models for complex pipelines.',
+      detail: 'Routes lightweight extraction tasks to fast models, reserving reasoning models for complex pipelines.',
       pattern: 'Model tiering + token caps + prompt caching for stable system schemas',
     },
     {
@@ -804,8 +646,7 @@ function ArchitectureFlowGraph() {
       title: 'MCP Specialist Agents',
       label: '3. Tool Protocol',
       tag: 'MODEL CONTEXT PROTOCOL',
-      detail:
-        'Autonomous tool invocations via Model Context Protocol (MCP) to fetch live database state.',
+      detail: 'Autonomous tool invocations via Model Context Protocol (MCP) to fetch live database state.',
       pattern: 'Structured JSON schema tool arguments + parallel non-blocking execution',
     },
     {
@@ -813,8 +654,7 @@ function ArchitectureFlowGraph() {
       title: 'Server Grounding Math Gate',
       label: '4. Math Check',
       tag: 'GROUNDING GATE',
-      detail:
-        'Treats LLM purely as a writer. The server computes the numbers; regex extracts every figure from output.',
+      detail: 'Treats LLM purely as a writer. The server computes the numbers; regex extracts every figure from output.',
       pattern: 'Fail-closed verification: any unmatched figure triggers an immediate retry or rejection',
     },
     {
@@ -822,14 +662,13 @@ function ArchitectureFlowGraph() {
       title: 'Input Hash Output Cache',
       label: '5. Deterministic Cache',
       tag: 'HASH CACHE',
-      detail:
-        'Hashes structured input + prompt version + model name. Guarantees deterministic sub-second responses.',
+      detail: 'Hashes structured input + prompt version + model name. Guarantees deterministic sub-second responses.',
       pattern: 'Hash key lookup in Redis/Memory: 29s latency ➔ 0.65s instant return',
     },
   ];
 
   return (
-    <div className="p-4 sm:p-5 rounded-2xl bg-[#060a17]/90 border border-cyan-500/30 shadow-[0_0_25px_rgba(6,182,212,0.15)] space-y-4">
+    <div className="p-4 sm:p-5 rounded-2xl bg-[#060a17]/90 border border-cyan-500/30 shadow-[0_0_25px_rgba(6,182,212,0.15)] space-y-4 my-2">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-cyan-500/20 pb-3">
         <div className="flex items-center gap-2">
           <div className="p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
@@ -837,19 +676,15 @@ function ArchitectureFlowGraph() {
           </div>
           <div>
             <span className="text-xs font-mono font-bold text-white tracking-wider">
-              INTERACTIVE SYSTEM ARCHITECTURE & DATA FLOW
+              SYSTEM ARCHITECTURE PIPELINE FLOW
             </span>
             <p className="text-[10px] text-slate-400 font-mono">
               Click any node to inspect data pipeline schematics and security gates
             </p>
           </div>
         </div>
-        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950 border border-cyan-500/30 text-cyan-300">
-          5 CONNECTED NODES
-        </span>
       </div>
 
-      {/* Interactive Node Flow Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5 relative">
         {steps.map((s, idx) => {
           const isSelected = activeStep === s.id;
@@ -872,8 +707,6 @@ function ArchitectureFlowGraph() {
               <span className="inline-block mt-2 px-1.5 py-0.5 rounded text-[8px] font-mono bg-slate-900 border border-slate-800 text-slate-400">
                 {s.tag}
               </span>
-
-              {/* Step indicator arrow for mobile or connectors */}
               {idx < steps.length - 1 && (
                 <div className="hidden sm:block absolute -right-2 top-1/2 -translate-y-1/2 z-10 text-cyan-400 font-bold text-xs pointer-events-none">
                   ➔
@@ -884,7 +717,6 @@ function ArchitectureFlowGraph() {
         })}
       </div>
 
-      {/* Selected Step Schematics Box */}
       <div className="p-4 rounded-xl bg-slate-950/90 border border-cyan-500/40 space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-xs font-mono font-bold text-cyan-300 flex items-center gap-2">
@@ -896,10 +728,7 @@ function ArchitectureFlowGraph() {
           </span>
         </div>
 
-        <p className="text-xs text-slate-300 font-sans leading-relaxed">
-          {steps[activeStep].detail}
-        </p>
-
+        <p className="text-xs text-slate-300 font-sans leading-relaxed">{steps[activeStep].detail}</p>
         <div className="pt-2 border-t border-slate-800/80 flex items-center gap-2 text-xs font-mono">
           <span className="text-slate-500">PRODUCTION PATTERN:</span>
           <span className="text-cyan-200">{steps[activeStep].pattern}</span>
@@ -910,256 +739,217 @@ function ArchitectureFlowGraph() {
 }
 
 // ---------------------------------------------------------------------------
-// 6. Holographic Neural Voice Equalizer Waveform
+// Markdown Table & Content Renderer
 // ---------------------------------------------------------------------------
-function NeuralVoiceWave({ isSpeaking, isListening, onToggleSpeech, hasText }) {
-  return (
-    <div className="flex items-center gap-3 px-3 py-1.5 rounded-full bg-slate-950/90 border border-cyan-500/30">
-      {/* 5-Bar Animated Equalizer */}
-      <div className="flex items-center gap-1 h-5 px-1">
-        <div
-          className={`w-1 rounded-full bg-cyan-400 transition-all ${
-            isSpeaking ? 'animate-eq-1' : 'h-1.5 bg-slate-600'
-          }`}
-        />
-        <div
-          className={`w-1 rounded-full bg-cyan-300 transition-all ${
-            isSpeaking ? 'animate-eq-2' : 'h-2 bg-slate-600'
-          }`}
-        />
-        <div
-          className={`w-1 rounded-full bg-sky-300 transition-all ${
-            isSpeaking ? 'animate-eq-3' : 'h-3 bg-slate-600'
-          }`}
-        />
-        <div
-          className={`w-1 rounded-full bg-emerald-400 transition-all ${
-            isSpeaking ? 'animate-eq-4' : 'h-2 bg-slate-600'
-          }`}
-        />
-        <div
-          className={`w-1 rounded-full bg-cyan-400 transition-all ${
-            isSpeaking ? 'animate-eq-5' : 'h-1.5 bg-slate-600'
-          }`}
-        />
-      </div>
+function FormattedContent({ text = '' }) {
+  const clean = text.replace(/\[NAV:[a-zA-Z0-9_-]+\]/g, '').trim();
+  const lines = clean.split('\n');
+  const blocks = [];
+  let currentTable = null;
+  let textBuffer = [];
 
-      {/* Voice Toggle Button */}
-      {hasText && (
-        <button
-          onClick={onToggleSpeech}
-          className="text-[10px] font-mono flex items-center gap-1.5 text-cyan-300 hover:text-white transition-colors cursor-pointer"
-        >
-          {isSpeaking ? (
-            <>
-              <VolumeX className="w-3.5 h-3.5 text-rose-400" />
-              <span>MUTE VOICE</span>
-            </>
-          ) : (
-            <>
-              <Volume2 className="w-3.5 h-3.5 text-cyan-400" />
-              <span>LISTEN TO DOSSIER</span>
-            </>
-          )}
-        </button>
-      )}
+  for (let line of lines) {
+    if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
+      if (textBuffer.length > 0) {
+        blocks.push({ type: 'text', content: textBuffer.join('\n') });
+        textBuffer = [];
+      }
+      if (!currentTable) currentTable = [];
+      currentTable.push(line.trim());
+    } else {
+      if (currentTable) {
+        blocks.push({ type: 'table', rows: currentTable });
+        currentTable = null;
+      }
+      textBuffer.push(line);
+    }
+  }
+  if (currentTable) blocks.push({ type: 'table', rows: currentTable });
+  if (textBuffer.length > 0) blocks.push({ type: 'text', content: textBuffer.join('\n') });
+
+  return (
+    <div className="space-y-3 font-sans text-sm text-slate-200 leading-relaxed">
+      {blocks.map((block, idx) => {
+        if (block.type === 'table') {
+          const headerCells = block.rows[0]
+            .split('|')
+            .map((c) => c.trim())
+            .filter(Boolean);
+          const bodyRows = block.rows
+            .slice(2)
+            .map((r) =>
+              r
+                .split('|')
+                .map((c) => c.trim())
+                .filter(Boolean)
+            )
+            .filter((r) => r.length > 0);
+
+          return (
+            <div key={idx} className="overflow-x-auto my-3 rounded-xl border border-slate-800 bg-slate-950/90 shadow-md">
+              <table className="w-full text-left text-xs font-mono">
+                <thead className="bg-slate-900 text-cyan-300 border-b border-slate-800">
+                  <tr>
+                    {headerCells.map((h, i) => (
+                      <th key={i} className="px-3.5 py-2.5 font-bold uppercase tracking-wider">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {bodyRows.map((row, rIdx) => (
+                    <tr key={rIdx} className="hover:bg-slate-900/50 transition-colors">
+                      {row.map((cell, cIdx) => (
+                        <td key={cIdx} className="px-3.5 py-2 text-slate-300">
+                          {cell}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
+
+        return (
+          <div key={idx} className="whitespace-pre-line">
+            {block.content}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
+// Intent Classifier: Decides Strictly On-Demand What Component is Needed
 // ---------------------------------------------------------------------------
-// 7. Contextual Follow-Up Suggestions Engine
+function determineVisualComponent(userQuery = '', text = '') {
+  const q = userQuery.toLowerCase().trim();
+
+  // 1. Explicit Charts & Visual Graphs (Strictly on-demand)
+  if (/(radar|spider)/.test(q) || (/(competency|skill|proficiency)/.test(q) && /(chart|graph|radar)/.test(q))) {
+    return 'chart-radar';
+  }
+  if (/(latency|speedup)/.test(q) && /(graph|chart|benchmark|comparison)/.test(q) || /(benchmark graph|latency graph)/.test(q)) {
+    return 'chart-latency';
+  }
+  if (/(postgres|query plan|explain|tuning)/.test(q) && /(graph|chart|comparison|plan)/.test(q)) {
+    return 'chart-postgres';
+  }
+  if (/(hyperloglog|hll|cardinality)/.test(q) || (/(memory)/.test(q) && /(curve|graph|chart|scaling)/.test(q))) {
+    return 'chart-hll';
+  }
+  if (/(flow|diagram|pipeline)/.test(q) && /(architecture|system|data flow|agent|flowchart)/.test(q) || /(architecture flow|pipeline flow)/.test(q)) {
+    return 'architecture-flow';
+  }
+
+  // 2. Component Boxes (Projects, Experience, Skills, Blog, Contact)
+  if (/(project|projects|code|repo|repos|built|github)/.test(q)) {
+    return 'projects';
+  }
+  if (/(experience|career|deloitte|pwc|tcs|tenure|company|companies|work history)/.test(q)) {
+    return 'experience';
+  }
+  if (/(blog|blogs|article|articles|post|posts|publication|publications)/.test(q)) {
+    return 'blog';
+  }
+  if (/(contact|email|hire|touch|reach out|linkedin|connect|message)/.test(q)) {
+    return 'contact';
+  }
+  if (/(skill|skills|stack|tech stack|technologies|languages|frameworks|tools)/.test(q)) {
+    return 'skills';
+  }
+
+  // 3. Fallback: Pure Text Only (No boxes, no charts, no clutter)
+  return 'text';
+}
+
 // ---------------------------------------------------------------------------
-function getFollowUpSuggestions(storyType = 'overview', text = '', name = 'Harsha') {
-  switch (storyType) {
-    case 'genai':
+// Dynamic Follow-Up Inquiry Suggestions
+// ---------------------------------------------------------------------------
+function getFollowUpSuggestions(componentType = 'text', text = '', name = 'Harsha') {
+  switch (componentType) {
+    case 'chart-radar':
       return [
-        {
-          label: 'How does the server-side math check work?',
-          query: 'How does the server-side math grounding gate work in code?',
-        },
-        {
-          label: 'What were the LiteLLM prompt cache latency gains?',
-          query: 'What are the exact latency benchmarks of LiteLLM prompt caching?',
-        },
-        {
-          label: 'What MCP specialist tools did ' + name + ' develop?',
-          query: 'What MCP specialist tools and autonomous agents did ' + name + ' build?',
-        },
-        {
-          label: 'Read "Never Let the LLM Do the Math" schematics',
-          query: 'Tell me about the Grounded Generation blog post',
-        },
+        { label: 'What backend frameworks does ' + name + ' specialize in?', query: 'Tell me about ' + name + '\'s Python and FastAPI expertise' },
+        { label: 'Show production projects built with these skills', query: 'Show me ' + name + '\'s featured projects' },
+        { label: 'Compare query latency in a benchmark graph', query: 'Compare query latency in a graph' },
       ];
-
-    case 'performance':
+    case 'chart-latency':
       return [
-        {
-          label: 'How does HyperLogLog union sketches at query time?',
-          query: 'How does HyperLogLog union sketches across locations and dates?',
-        },
-        {
-          label: 'What composite index order was used in Postgres?',
-          query: 'What composite index order and query plan tips does ' + name + ' recommend?',
-        },
-        {
-          label: 'How is chunked file streaming implemented?',
-          query: 'How does streaming upload reduce peak memory from 100MB to 1MB?',
-        },
-        {
-          label: 'Read "Fast, Safe, Reliable APIs" schematics',
-          query: 'Tell me about the Backend Performance and Reliability post',
-        },
+        { label: 'How does the server-side math grounding gate work?', query: 'How does the server math check work in code?' },
+        { label: 'Show GenAI system architecture flow', query: 'Show GenAI system architecture flow' },
+        { label: 'Read "Never Let the LLM Do the Math" schematics', query: 'Tell me about the Grounded Generation blog post' },
       ];
-
-    case 'bigdata':
+    case 'chart-postgres':
       return [
-        {
-          label: 'Tell me about PySpark pipelines at PwC AC India',
-          query: 'What PySpark ETL pipelines did ' + name + ' design at PwC AC India?',
-        },
-        {
-          label: 'How does Azure Synapse integrate with Databricks?',
-          query: 'How did ' + name + ' architect Azure Synapse and Databricks solutions?',
-        },
-        {
-          label: 'Show projects using Big Data and Cloud',
-          query: 'What featured projects showcase cloud and big data engineering?',
-        },
-        {
-          label: 'View skills matrix for data engineering',
-          query: 'What are ' + name + '\'s data engineering and cloud skills?',
-        },
+        { label: 'How does HyperLogLog count distinct users?', query: 'Show HyperLogLog memory curve' },
+        { label: 'What composite index order was chosen?', query: 'What composite index order and query plan tips does ' + name + ' recommend?' },
+        { label: 'Read "Fast, Safe, Reliable APIs" schematics', query: 'Tell me about the Backend Performance and Reliability post' },
       ];
-
-    case 'skills':
+    case 'chart-hll':
       return [
-        {
-          label: 'What backend frameworks does ' + name + ' specialize in?',
-          query: 'Tell me about ' + name + '\'s Python, FastAPI, and backend expertise',
-        },
-        {
-          label: 'Show production projects built with these skills',
-          query: 'Show me ' + name + '\'s featured production projects',
-        },
-        {
-          label: 'Which enterprise roles utilized these technologies?',
-          query: 'What technologies did ' + name + ' use at Deloitte, PwC, and TCS?',
-        },
-        {
-          label: 'What is ' + name + '\'s GenAI and agent architecture?',
-          query: 'What is ' + name + '\'s GenAI architecture pattern?',
-        },
+        { label: 'How are sketches unioned at query time?', query: 'How does HyperLogLog union sketches across locations and dates?' },
+        { label: 'Show Postgres query plan comparison', query: 'Show Postgres query plan tuning comparison' },
+        { label: 'Where has ' + name + ' applied big data systems?', query: 'Where has ' + name + ' worked in his career?' },
       ];
-
+    case 'architecture-flow':
+      return [
+        { label: 'What were the LiteLLM prompt cache latency gains?', query: 'Compare query latency in a graph' },
+        { label: 'How does the math verification gate work?', query: 'How does the server math check work in code?' },
+        { label: 'Show featured GenAI projects', query: 'Show me ' + name + '\'s projects' },
+      ];
     case 'projects':
       return [
-        {
-          label: 'Which project had the highest performance impact?',
-          query: 'Which project had the highest scalability and performance impact?',
-        },
-        {
-          label: 'What GenAI or autonomous agent projects exist?',
-          query: 'Show me ' + name + '\'s GenAI and autonomous agent projects',
-        },
-        {
-          label: 'Where can I inspect the GitHub source code?',
-          query: 'Where can I find ' + name + '\'s GitHub repositories and source code?',
-        },
-        {
-          label: 'How can I connect with ' + name + ' regarding these projects?',
-          query: 'How can I get in touch with ' + name + '?',
-        },
+        { label: 'Which project had the highest performance impact?', query: 'Which project had the highest scalability and performance impact?' },
+        { label: 'Show competency radar chart', query: 'Show the competency radar chart' },
+        { label: 'How can I get in touch with ' + name + '?', query: 'How can I get in touch with ' + name + '?' },
       ];
-
     case 'experience':
       return [
-        {
-          label: 'What was ' + name + '\'s largest impact at Deloitte USI?',
-          query: 'What was ' + name + '\'s core architectural impact at Deloitte USI?',
-        },
-        {
-          label: 'What distributed pipelines were built at PwC?',
-          query: 'What distributed data pipelines did ' + name + ' build at PwC AC India?',
-        },
-        {
-          label: 'What was ' + name + '\'s engineering role at TCS?',
-          query: 'What systems did ' + name + ' engineer at TCS?',
-        },
-        {
-          label: 'What technical publications has ' + name + ' authored?',
-          query: 'What technical blog posts has ' + name + ' written?',
-        },
+        { label: 'What was ' + name + '\'s largest impact at Deloitte USI?', query: 'What was ' + name + '\'s core architectural impact at Deloitte USI?' },
+        { label: 'What distributed pipelines were built at PwC?', query: 'What distributed data pipelines did ' + name + ' build at PwC AC India?' },
+        { label: 'Show production projects', query: 'Show me ' + name + '\'s projects' },
       ];
-
+    case 'skills':
+      return [
+        { label: 'Show competency radar chart', query: 'Show the competency radar chart' },
+        { label: 'Show production projects', query: 'Show me ' + name + '\'s projects' },
+        { label: 'Where has ' + name + ' worked in his career?', query: 'Where has ' + name + ' worked in his career?' },
+      ];
     case 'blog':
       return [
-        {
-          label: 'What is the core takeaway of Grounded Generation?',
-          query: 'What is the main architectural principle of Grounded LLM Generation?',
-        },
-        {
-          label: 'Why is HyperLogLog preferred for analytics APIs?',
-          query: 'Why use HyperLogLog sketches instead of exact distinct counts?',
-        },
-        {
-          label: 'How do you prevent authorization wildcards?',
-          query: 'How should API authorization be designed to avoid permission creep?',
-        },
-        {
-          label: 'Show system architecture flow diagram',
-          query: 'Show me ' + name + '\'s GenAI architecture flow diagram',
-        },
+        { label: 'What is the core takeaway of Grounded Generation?', query: 'What is the main architectural principle of Grounded LLM Generation?' },
+        { label: 'Why is HyperLogLog preferred for analytics APIs?', query: 'Show HyperLogLog memory curve' },
+        { label: 'Show GenAI architecture flow diagram', query: 'Show GenAI system architecture flow' },
       ];
-
     case 'contact':
       return [
-        {
-          label: 'What engineering roles is ' + name + ' open to?',
-          query: 'What engineering roles and opportunities is ' + name + ' open to?',
-        },
-        {
-          label: 'What is ' + name + '\'s email and LinkedIn?',
-          query: 'What is ' + name + '\'s direct email address and LinkedIn profile?',
-        },
-        {
-          label: 'Review ' + name + '\'s production projects',
-          query: 'Show me ' + name + '\'s top production projects',
-        },
-        {
-          label: 'Inspect architectural competency radar',
-          query: 'Show me the architectural competency radar chart',
-        },
+        { label: 'What engineering roles is ' + name + ' open to?', query: 'What engineering roles and opportunities is ' + name + ' open to?' },
+        { label: 'Review ' + name + '\'s production projects', query: 'Show me ' + name + '\'s projects' },
+        { label: 'Where has ' + name + ' worked?', query: 'Where has ' + name + ' worked in his career?' },
       ];
-
     default:
       return [
-        {
-          label: '⚡ Explore GenAI & LiteLLM Gateway flow',
-          query: 'Tell me about ' + name + '\'s GenAI and Grounded Architecture work',
-        },
-        {
-          label: '🚀 Inspect Postgres & API performance graphs',
-          query: 'Explain ' + name + '\'s API and Postgres performance optimization patterns',
-        },
-        {
-          label: '📊 View interactive Competency Radar',
-          query: 'Display ' + name + '\'s competency radar and skills matrix',
-        },
-        {
-          label: '🏛️ Explore enterprise career milestones',
-          query: 'Summarize ' + name + '\'s enterprise career milestones at Deloitte, PwC, and TCS',
-        },
+        { label: 'Show featured projects', query: 'Show me ' + name + '\'s projects' },
+        { label: 'Where has ' + name + ' worked?', query: 'Where has ' + name + ' worked in his career?' },
+        { label: 'Show skills & competency radar', query: 'Show the competency radar chart' },
+        { label: 'How to contact ' + name + '?', query: 'How can I get in touch with ' + name + '?' },
       ];
   }
 }
 
+// ---------------------------------------------------------------------------
+// Follow-up Suggestions Component
+// ---------------------------------------------------------------------------
 function FollowUpSuggestions({ suggestions = [], onSelect }) {
   if (!suggestions || suggestions.length === 0) return null;
 
   return (
-    <div className="pt-3.5 border-t border-cyan-500/20 space-y-2">
+    <div className="pt-3 border-t border-cyan-500/20 space-y-2">
       <div className="flex items-center gap-1.5 text-[10px] font-mono text-cyan-400 uppercase tracking-widest">
         <Sparkles className="w-3 h-3 text-cyan-300 animate-pulse" />
         <span>SUGGESTED FOLLOW-UP INQUIRIES:</span>
@@ -1180,7 +970,8 @@ function FollowUpSuggestions({ suggestions = [], onSelect }) {
   );
 }
 
-// Main AI Command Center Component
+// ---------------------------------------------------------------------------
+// Main Agent Component
 // ---------------------------------------------------------------------------
 export default function ChatWidget({
   profile = {},
@@ -1192,7 +983,7 @@ export default function ChatWidget({
   const [isOpen, setIsOpen] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(true);
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState([]); // Initially empty: pure search bar state
   const [loading, setLoading] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -1206,24 +997,7 @@ export default function ChatWidget({
 
   const fullName = profile?.name || 'Harsha Vardhan Reddy';
   const firstName = fullName.split(' ')[0] || 'Harsha';
-
-  // Initial Welcome Dossier
-  useEffect(() => {
-    if (messages.length === 0) {
-      setMessages([
-        {
-          sender: 'agent',
-          text: `Neural Intelligence Engine Active. I am ${firstName}'s personal architecture intelligence agent.
-
-Telemetry loaded across ${experiences.length} enterprise engineering tenures, ${projects.length} production repositories, and verified cloud systems benchmarks. 
-
-Enter any inquiry or select a deep-dive visual dossier below:`,
-          timestamp: new Date(),
-          storyType: 'overview',
-        },
-      ]);
-    }
-  }, [firstName, experiences.length, projects.length]);
+  const agentName = `${firstName}'s Agent`;
 
   // Keyboard shortcut Ctrl+K and Esc
   useEffect(() => {
@@ -1272,8 +1046,7 @@ Enter any inquiry or select a deep-dive visual dossier below:`,
   // Voice Search / Dictation
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const SpeechRecognition =
-        window.SpeechRecognition || window.webkitSpeechRecognition;
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognition) {
         const recognition = new SpeechRecognition();
         recognition.continuous = false;
@@ -1318,7 +1091,7 @@ Enter any inquiry or select a deep-dive visual dossier below:`,
       setIsSpeaking(false);
     } else {
       window.speechSynthesis.cancel();
-      const clean = text.replace(/\[NAV:[a-zA-Z0-9_-]+\]/g, '').replace(/[#*`_~]/g, '');
+      const clean = text.replace(/\[NAV:[a-zA-Z0-9_-]+\]/g, '').replace(/[#*`_~|]/g, '');
       const utterance = new SpeechSynthesisUtterance(clean);
       utterance.rate = 1.05;
       utterance.pitch = 0.95;
@@ -1331,25 +1104,16 @@ Enter any inquiry or select a deep-dive visual dossier below:`,
     }
   };
 
-  // Navigation Lock-On with Cyan Pulse
+  // Lock On in Portfolio Page
   const handleLockOnInPortfolio = (target) => {
     setIsOpen(false);
     playHudSound('close');
 
-    if (target === 'blog' && selectedArticle) {
-      window.location.hash = '#blog';
-    }
-
     const sectionId = target.replace('#', '');
-    if (window.location.hash === '#blog') {
-      window.location.hash = '';
-    }
-
     setTimeout(() => {
       const element = document.getElementById(sectionId);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
         element.classList.add(
           'ring-2',
           'ring-cyan-400',
@@ -1379,97 +1143,8 @@ Enter any inquiry or select a deep-dive visual dossier below:`,
     }, 200);
   };
 
-  // Determine Story Type & Visual Domain from Query
-  const analyzeStoryType = (text, userQuery = '') => {
-    const combined = `${userQuery} ${text}`.toLowerCase();
-    if (
-      combined.includes('genai') ||
-      combined.includes('llm') ||
-      combined.includes('agent') ||
-      combined.includes('mcp') ||
-      combined.includes('rag') ||
-      combined.includes('prompt') ||
-      combined.includes('litellm') ||
-      combined.includes('math')
-    ) {
-      return 'genai';
-    }
-    if (
-      combined.includes('postgres') ||
-      combined.includes('query plan') ||
-      combined.includes('hyperloglog') ||
-      combined.includes('index') ||
-      combined.includes('latency') ||
-      combined.includes('speed') ||
-      combined.includes('bottleneck') ||
-      combined.includes('performance')
-    ) {
-      return 'performance';
-    }
-    if (
-      combined.includes('data') ||
-      combined.includes('etl') ||
-      combined.includes('synapse') ||
-      combined.includes('spark') ||
-      combined.includes('pyspark') ||
-      combined.includes('pipeline') ||
-      combined.includes('databricks')
-    ) {
-      return 'bigdata';
-    }
-    if (
-      combined.includes('project') ||
-      combined.includes('schematic') ||
-      combined.includes('app') ||
-      combined.includes('code') ||
-      combined.includes('repo') ||
-      combined.includes('github')
-    ) {
-      return 'projects';
-    }
-    if (
-      combined.includes('experience') ||
-      combined.includes('career') ||
-      combined.includes('deloitte') ||
-      combined.includes('pwc') ||
-      combined.includes('tcs') ||
-      combined.includes('work history') ||
-      combined.includes('roles')
-    ) {
-      return 'experience';
-    }
-    if (
-      combined.includes('skill') ||
-      combined.includes('tech stack') ||
-      combined.includes('competency') ||
-      combined.includes('radar') ||
-      combined.includes('languages') ||
-      combined.includes('frameworks')
-    ) {
-      return 'skills';
-    }
-    if (
-      combined.includes('blog') ||
-      combined.includes('article') ||
-      combined.includes('post') ||
-      combined.includes('grounded') ||
-      combined.includes('api security')
-    ) {
-      return 'blog';
-    }
-    if (
-      combined.includes('contact') ||
-      combined.includes('hire') ||
-      combined.includes('email') ||
-      combined.includes('reach out') ||
-      combined.includes('linkedin')
-    ) {
-      return 'contact';
-    }
-    return 'overview';
-  };
-
-  const handleSend = async (customQuery = null, overrideType = null) => {
+  // Send Query
+  const handleSend = async (customQuery = null) => {
     const query = customQuery || input;
     if (!query.trim() || loading) return;
 
@@ -1484,15 +1159,9 @@ Enter any inquiry or select a deep-dive visual dossier below:`,
     setLoading(true);
 
     try {
-      const history = newMessages.map((m) => ({
-        role: m.sender === 'user' ? 'user' : 'model',
-        text: m.text,
-      }));
-
-      const res = await sendChatMessage(query, history);
-      const reply = res.reply || 'Dossier synthesized from system telemetry.';
-
-      const storyType = overrideType || analyzeStoryType(reply, query);
+      const res = await sendChatMessage(query);
+      const reply = res.reply || `Synthesized information for "${query}".`;
+      const componentType = determineVisualComponent(query, reply);
 
       setMessages([
         ...newMessages,
@@ -1500,17 +1169,18 @@ Enter any inquiry or select a deep-dive visual dossier below:`,
           sender: 'agent',
           text: reply,
           timestamp: new Date(),
-          storyType,
+          componentType,
         },
       ]);
     } catch {
+      const componentType = determineVisualComponent(query, '');
       setMessages([
         ...newMessages,
         {
           sender: 'agent',
-          text: `Neural telemetry offline. Reconnecting to ${firstName}'s system core...`,
+          text: `Telemetry offline. Here is the local system dossier for ${firstName}:`,
           timestamp: new Date(),
-          storyType: overrideType || 'overview',
+          componentType,
         },
       ]);
     } finally {
@@ -1524,208 +1194,32 @@ Enter any inquiry or select a deep-dive visual dossier below:`,
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
-  // -------------------------------------------------------------------------
-  // Render Dynamic Visual Story & Interactive Components
-  // -------------------------------------------------------------------------
-  const renderVisualStory = (storyType = 'overview') => {
-    switch (storyType) {
-      case 'genai':
+  // Render Visual Component Strictly On-Demand
+  const renderVisualComponentOnDemand = (componentType) => {
+    switch (componentType) {
+      case 'chart-radar':
         return (
-          <div className="space-y-4 animate-fadeIn">
-            {/* Real Latency Benchmark Comparison Chart */}
-            <LatencyBenchmarkChart />
-
-            {/* Real Interactive Architecture Flowchart */}
-            <ArchitectureFlowGraph />
-
-            {/* Recommended Deep Dive Technical Articles */}
-            {posts.length > 0 && (
-              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-mono font-bold text-slate-200 flex items-center gap-1.5">
-                    <BookOpen className="w-3.5 h-3.5 text-cyan-400" /> Grounded Architecture Publication
-                  </span>
-                  <button
-                    onClick={() => handleLockOnInPortfolio('blog')}
-                    className="text-[10px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>View in Blog</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </button>
-                </div>
-                {posts
-                  .filter((p) => p.slug.includes('llm') || p.tags?.toLowerCase().includes('genai'))
-                  .slice(0, 1)
-                  .map((post) => (
-                    <div
-                      key={post.id}
-                      className="p-3.5 rounded-lg bg-slate-950/80 border border-cyan-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                    >
-                      <div>
-                        <h4 className="text-sm font-bold text-white hover:text-cyan-300 transition-colors">
-                          {post.title}
-                        </h4>
-                        <p className="text-xs text-slate-400 mt-1 line-clamp-1">{post.excerpt}</p>
-                      </div>
-                      <button
-                        onClick={() => setSelectedArticle(post)}
-                        className="px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 shrink-0 cursor-pointer flex items-center gap-1.5"
-                      >
-                        <BookOpen className="w-3.5 h-3.5" />
-                        <span>Read Schematics</span>
-                      </button>
-                    </div>
-                  ))}
-              </div>
-            )}
-          </div>
+          <RadarSkillChart
+            activeDomain={activeRadarDomain}
+            onSelectDomain={setActiveRadarDomain}
+          />
         );
 
-      case 'performance':
-        return (
-          <div className="space-y-4 animate-fadeIn">
-            {/* Real PostgreSQL Query Plan Tuning Graph */}
-            <QueryPlanComparisonChart />
+      case 'chart-latency':
+        return <LatencyBenchmarkChart />;
 
-            {/* Real Memory Cardinality Graph */}
-            <HllMemoryChart />
+      case 'chart-postgres':
+        return <QueryPlanComparisonChart />;
 
-            {/* Performance Deep Dive Article */}
-            {posts
-              .filter((p) => p.slug.includes('api') || p.slug.includes('postgres'))
-              .slice(0, 1)
-              .map((post) => (
-                <div
-                  key={post.id}
-                  className="p-4 rounded-xl bg-slate-900/60 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                >
-                  <div>
-                    <span className="text-[10px] font-mono text-amber-400 uppercase tracking-widest">
-                      FEATURED ARCHITECTURE ARTICLE
-                    </span>
-                    <h4 className="text-sm font-bold text-white mt-1">{post.title}</h4>
-                    <p className="text-xs text-slate-400 mt-1">{post.excerpt}</p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => setSelectedArticle(post)}
-                      className="px-3 py-1.5 rounded-lg text-xs font-mono font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 cursor-pointer flex items-center gap-1.5"
-                    >
-                      <BookOpen className="w-3.5 h-3.5" />
-                      <span>Read Guide</span>
-                    </button>
-                    <button
-                      onClick={() => handleLockOnInPortfolio('experience')}
-                      className="px-2.5 py-1.5 rounded-lg text-xs font-mono text-slate-400 hover:text-white bg-slate-800 border border-slate-700 cursor-pointer"
-                      title="Lock on in Experience Timeline"
-                    >
-                      <Crosshair className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-          </div>
-        );
+      case 'chart-hll':
+        return <HllMemoryChart />;
 
-      case 'bigdata':
-        return (
-          <div className="space-y-4 animate-fadeIn">
-            {/* Memory Scaling Visual Curve */}
-            <HllMemoryChart />
-
-            {/* Big Data Cloud Stack Visual Dossier */}
-            <div className="p-4 rounded-xl bg-slate-900/60 border border-emerald-500/30">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-mono font-bold text-emerald-400 flex items-center gap-1.5">
-                  <Database className="w-3.5 h-3.5" /> Cloud ETL & Big Data Architecture
-                </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 border border-emerald-500/30 text-emerald-300">
-                  AZURE SYNAPSE // DATABRICKS
-                </span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
-                  <div className="text-[10px] font-mono text-slate-400 uppercase">Batch Ingestion</div>
-                  <div className="text-xs font-semibold text-white mt-1">PySpark Transformations</div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">High-volume analytical data extraction</div>
-                </div>
-                <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
-                  <div className="text-[10px] font-mono text-slate-400 uppercase">Cloud Storage</div>
-                  <div className="text-xs font-semibold text-white mt-1">Azure Synapse & BigQuery</div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">Relational & columnar analytical warehousing</div>
-                </div>
-                <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
-                  <div className="text-[10px] font-mono text-slate-400 uppercase">Streaming & Uploads</div>
-                  <div className="text-xs font-semibold text-white mt-1">Chunked File Streaming</div>
-                  <div className="text-[11px] text-slate-400 mt-0.5">~99% lower peak memory (100MB ➔ 1MB)</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Reused Experience Highlights */}
-            {experiences
-              .filter((e) => e.company.includes('PwC') || e.company.includes('Deloitte'))
-              .slice(0, 2)
-              .map((exp) => (
-                <div
-                  key={exp.id}
-                  className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                >
-                  <div>
-                    <span className="text-xs font-mono font-bold text-emerald-400">{exp.company}</span>
-                    <span className="text-xs text-slate-300 font-semibold ml-2">— {exp.role}</span>
-                    <div className="text-[11px] text-slate-400 font-mono mt-1">Tech: {exp.skills_text}</div>
-                  </div>
-                  <button
-                    onClick={() => handleLockOnInPortfolio('experience')}
-                    className="px-3 py-1.5 rounded-lg text-xs font-mono text-emerald-400 hover:text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 shrink-0 cursor-pointer flex items-center gap-1.5"
-                  >
-                    <Crosshair className="w-3.5 h-3.5" />
-                    <span>Focus In Timeline</span>
-                  </button>
-                </div>
-              ))}
-          </div>
-        );
-
-      case 'skills':
-        return (
-          <div className="space-y-4 animate-fadeIn">
-            {/* Interactive Multi-Axis Competency Radar */}
-            <RadarSkillChart
-              activeDomain={activeRadarDomain}
-              onSelectDomain={setActiveRadarDomain}
-            />
-
-            {/* Categorized Skills Catalog */}
-            <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-mono font-bold text-slate-300">Skills Catalog</span>
-                <button
-                  onClick={() => handleLockOnInPortfolio('skills')}
-                  className="text-xs font-mono text-purple-400 hover:text-purple-300 flex items-center gap-1 cursor-pointer"
-                >
-                  <Crosshair className="w-3 h-3" />
-                  <span>Lock On in Skills</span>
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {skills.slice(0, 30).map((s, idx) => (
-                  <span
-                    key={idx}
-                    className="px-2.5 py-1 rounded-lg text-xs font-mono bg-slate-950 border border-slate-800/80 text-slate-300 hover:border-purple-400/40 transition-colors"
-                  >
-                    {s.name}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
+      case 'architecture-flow':
+        return <ArchitectureFlowGraph />;
 
       case 'projects':
         return (
-          <div className="space-y-4 animate-fadeIn">
+          <div className="space-y-3 my-2 animate-fadeIn">
             <div className="flex items-center justify-between">
               <span className="text-xs font-mono font-bold text-cyan-300 flex items-center gap-1.5">
                 <FolderGit2 className="w-3.5 h-3.5 text-cyan-400" /> Production Repositories & Schematics
@@ -1764,7 +1258,6 @@ Enter any inquiry or select a deep-dive visual dossier below:`,
                         )}
                       </div>
                       <p className="text-xs text-slate-400 mt-1 line-clamp-2">{proj.description}</p>
-
                       {bullets.length > 0 && (
                         <div className="mt-2 space-y-1">
                           {bullets.slice(0, 2).map((b, bIdx) => (
@@ -1790,7 +1283,6 @@ Enter any inquiry or select a deep-dive visual dossier below:`,
                           ))}
                         </div>
                       )}
-
                       <div className="flex items-center gap-2">
                         {proj.github_url && (
                           <a
@@ -1825,10 +1317,10 @@ Enter any inquiry or select a deep-dive visual dossier below:`,
 
       case 'experience':
         return (
-          <div className="space-y-4 animate-fadeIn">
+          <div className="space-y-3 my-2 animate-fadeIn">
             <div className="flex items-center justify-between">
               <span className="text-xs font-mono font-bold text-emerald-300 flex items-center gap-1.5">
-                <Briefcase className="w-3.5 h-3.5 text-emerald-400" /> Career Milestones & Tenures
+                <Briefcase className="w-3.5 h-3.5 text-emerald-400" /> Enterprise Milestones & Tenures
               </span>
               <button
                 onClick={() => handleLockOnInPortfolio('experience')}
@@ -1887,9 +1379,37 @@ Enter any inquiry or select a deep-dive visual dossier below:`,
           </div>
         );
 
+      case 'skills':
+        return (
+          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 my-2 animate-fadeIn">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-mono font-bold text-slate-300 flex items-center gap-1.5">
+                <Sliders className="w-3.5 h-3.5 text-purple-400" /> Categorized Skills & Tooling
+              </span>
+              <button
+                onClick={() => handleLockOnInPortfolio('skills')}
+                className="text-xs font-mono text-purple-400 hover:text-purple-300 flex items-center gap-1 cursor-pointer"
+              >
+                <Crosshair className="w-3 h-3" />
+                <span>Lock On in Skills</span>
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {skills.map((s, idx) => (
+                <span
+                  key={idx}
+                  className="px-2.5 py-1 rounded-lg text-xs font-mono bg-slate-950 border border-slate-800/80 text-slate-300 hover:border-purple-400/40 transition-colors"
+                >
+                  {s.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+
       case 'blog':
         return (
-          <div className="space-y-4 animate-fadeIn">
+          <div className="space-y-3 my-2 animate-fadeIn">
             <div className="flex items-center justify-between">
               <span className="text-xs font-mono font-bold text-cyan-300 flex items-center gap-1.5">
                 <BookOpen className="w-3.5 h-3.5 text-cyan-400" /> Published Engineering Blueprints
@@ -1934,7 +1454,7 @@ Enter any inquiry or select a deep-dive visual dossier below:`,
 
       case 'contact':
         return (
-          <div className="p-4 rounded-xl bg-slate-900/60 border border-cyan-500/30 space-y-3 animate-fadeIn">
+          <div className="p-4 rounded-xl bg-slate-900/60 border border-cyan-500/30 space-y-3 my-2 animate-fadeIn">
             <div className="flex items-center justify-between">
               <span className="text-xs font-mono font-bold text-cyan-300">Direct Contact Transmission</span>
               <button
@@ -1946,7 +1466,7 @@ Enter any inquiry or select a deep-dive visual dossier below:`,
               </button>
             </div>
             <p className="text-xs text-slate-300 font-sans">
-              Connect directly with {firstName} for distributed systems architecture, cloud data modernization, or engineering leadership:
+              Connect directly with {firstName} for distributed systems architecture, cloud data pipelines, or engineering opportunities:
             </p>
             <div className="flex flex-wrap gap-2 pt-1">
               {profile?.email && (
@@ -1984,95 +1504,45 @@ Enter any inquiry or select a deep-dive visual dossier below:`,
         );
 
       default:
-        // Overview Visual Presets Bar & Competency Radar
-        return (
-          <div className="space-y-4 pt-1 animate-fadeIn">
-            {/* Interactive Radar Chart */}
-            <RadarSkillChart
-              activeDomain={activeRadarDomain}
-              onSelectDomain={setActiveRadarDomain}
-            />
-
-            {/* Quick Dossier Launcher Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <button
-                onClick={() =>
-                  handleSend(`Tell me about ${firstName}'s GenAI & LLM engineering work`, 'omni', 'genai')
-                }
-                className="p-3 rounded-xl bg-slate-900/60 border border-cyan-500/30 hover:border-cyan-400 hover:bg-slate-900 transition-all text-left cursor-pointer group"
-              >
-                <div className="flex items-center gap-2 text-xs font-mono font-bold text-cyan-300 group-hover:text-cyan-200">
-                  <Cpu className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>GenAI & Grounding Flow</span>
-                </div>
-                <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">
-                  LiteLLM, MCP Specialist Agents & Input Hash Cache
-                </p>
-              </button>
-
-              <button
-                onClick={() =>
-                  handleSend(`What are ${firstName}'s API and Postgres performance patterns?`, 'omni', 'performance')
-                }
-                className="p-3 rounded-xl bg-slate-900/60 border border-amber-500/30 hover:border-amber-400 hover:bg-slate-900 transition-all text-left cursor-pointer group"
-              >
-                <div className="flex items-center gap-2 text-xs font-mono font-bold text-amber-300 group-hover:text-amber-200">
-                  <Zap className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Postgres & API Tuning</span>
-                </div>
-                <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">
-                  Query plans, HyperLogLog distinct counts & compression
-                </p>
-              </button>
-
-              <button
-                onClick={() =>
-                  handleSend(`What is ${firstName}'s enterprise career trajectory?`, 'omni', 'experience')
-                }
-                className="p-3 rounded-xl bg-slate-900/60 border border-emerald-500/30 hover:border-emerald-400 hover:bg-slate-900 transition-all text-left cursor-pointer group"
-              >
-                <div className="flex items-center gap-2 text-xs font-mono font-bold text-emerald-300 group-hover:text-emerald-200">
-                  <Briefcase className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Enterprise Career Journey</span>
-                </div>
-                <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">
-                  Deloitte USI, PwC AC India, and TCS milestones
-                </p>
-              </button>
-            </div>
-          </div>
-        );
+        // 'text' only: no boxes, no charts, pure clean text
+        return null;
     }
   };
+
+  const initialSuggestions = [
+    { label: `Who is ${firstName}?`, query: `Who is ${firstName}?` },
+    { label: 'Show featured projects', query: 'Show me featured projects' },
+    { label: 'Where has he worked?', query: 'Where has he worked in his career?' },
+    { label: 'Show competency radar chart', query: 'Show the competency radar chart' },
+    { label: 'Show GenAI architecture flow', query: 'Show GenAI system architecture flow' },
+    { label: 'Compare query latency in a graph', query: 'Compare query latency in a graph' },
+    { label: 'Show Postgres query plan comparison', query: 'Show Postgres query plan tuning comparison' },
+    { label: 'What technical blogs did he write?', query: 'What technical blogs did he write?' },
+    { label: 'How can I get in touch?', query: 'How can I get in touch with him?' },
+  ];
 
   return (
     <>
       {/* ---------------------------------------------------- */}
-      {/* Floating Holographic Launch Button                   */}
+      {/* Launch Button: User Firstname + " Agent"             */}
       {/* ---------------------------------------------------- */}
       {!isOpen && (
         <div className="fixed bottom-6 right-6 z-40">
           <button
             onClick={() => setIsOpen(true)}
-            aria-label="Open AI Personal Command Center"
-            className="relative group cursor-pointer flex items-center gap-3 p-2 pr-4 rounded-full bg-[#050811]/90 backdrop-blur-md border border-cyan-500/40 hover:border-cyan-400 shadow-[0_0_35px_rgba(6,182,212,0.35)] hover:shadow-[0_0_55px_rgba(6,182,212,0.6)] transition-all duration-300 hover:scale-105 active:scale-95"
+            aria-label={`Open ${agentName}`}
+            className="group cursor-pointer flex items-center gap-3 p-2.5 pr-4 rounded-full bg-[#050811]/90 backdrop-blur-md border border-cyan-500/40 hover:border-cyan-400 shadow-[0_0_30px_rgba(6,182,212,0.3)] hover:shadow-[0_0_45px_rgba(6,182,212,0.5)] transition-all duration-300 hover:scale-105 active:scale-95"
           >
-            {/* Spinning Arc Reactor Core Animation */}
-            <div className="relative w-11 h-11 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full border border-dashed border-cyan-400/80 animate-jarvis-spin" />
-              <div className="absolute inset-1 rounded-full border border-dotted border-cyan-300/70 animate-jarvis-spin-reverse" />
-              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-cyan-500 to-sky-300 animate-jarvis-pulse flex items-center justify-center shadow-[0_0_15px_#06b6d4]">
-                <div className="w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_8px_#ffffff]" />
-              </div>
+            <div className="w-9 h-9 rounded-full bg-cyan-950 border border-cyan-400/60 flex items-center justify-center text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.3)] group-hover:bg-cyan-900 transition-colors">
+              <Search className="w-4 h-4 text-cyan-400" />
             </div>
 
-            {/* AI HUD Label */}
             <div className="flex flex-col text-left">
-              <span className="text-xs font-mono font-bold text-cyan-300 tracking-widest flex items-center gap-1.5">
-                {fullName ? `${firstName}'s AI Agent` : 'AI COMMAND CENTER'}
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+              <span className="text-xs font-mono font-bold text-white tracking-wider flex items-center gap-1.5">
+                {agentName}
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               </span>
-              <span className="text-[9px] font-mono text-cyan-500/90 tracking-wider uppercase flex items-center gap-1">
+              <span className="text-[9px] font-mono text-cyan-400/80 tracking-wider uppercase flex items-center gap-1">
                 <span>PRESS</span>
                 <kbd className="px-1 py-0.2 rounded bg-cyan-950 border border-cyan-500/40 text-[8px] text-cyan-300">
                   Ctrl+K
@@ -2084,7 +1554,7 @@ Enter any inquiry or select a deep-dive visual dossier below:`,
       )}
 
       {/* ---------------------------------------------------- */}
-      {/* Full-Screen Holographic Neural Search Command Center */}
+      {/* Full-Screen Search Engine Modal Canvas               */}
       {/* ---------------------------------------------------- */}
       {isOpen && (
         <div
@@ -2094,48 +1564,38 @@ Enter any inquiry or select a deep-dive visual dossier below:`,
               : 'bottom-4 right-4 sm:bottom-6 sm:right-6 w-full sm:w-[94vw] sm:max-w-5xl h-[92vh] rounded-2xl bg-[#050811]/98 border border-cyan-500/40 shadow-[0_0_60px_rgba(6,182,212,0.35)] flex flex-col overflow-hidden'
           }`}
         >
-          {/* Futuristic HUD Corner Brackets */}
-          <div className="jarvis-corner-tl" />
-          <div className="jarvis-corner-tr" />
-          <div className="jarvis-corner-bl" />
-          <div className="jarvis-corner-br" />
-
-          {/* Background Holographic Grid Scan */}
-          <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none" />
-
-          {/* Top Telemetry Header Bar */}
-          <div className="px-4 sm:px-6 py-3 bg-[#060a17]/95 border-b border-cyan-500/30 flex items-center justify-between shrink-0 relative z-10">
-            {/* Left: Holographic Reactor Status */}
+          {/* Top Bar Header */}
+          <div className="px-4 sm:px-6 py-3 bg-[#060a17]/95 border-b border-cyan-500/20 flex items-center justify-between shrink-0 relative z-10">
             <div className="flex items-center gap-3">
-              <div className="relative w-8 h-8 flex items-center justify-center shrink-0">
-                <div className="absolute inset-0 rounded-full border border-dashed border-cyan-400 animate-jarvis-spin" />
-                <div className="w-4 h-4 rounded-full bg-cyan-400 animate-jarvis-pulse flex items-center justify-center shadow-[0_0_12px_#06b6d4]">
-                  <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                </div>
+              <div className="w-7 h-7 rounded-lg bg-cyan-950 border border-cyan-400/50 flex items-center justify-center text-cyan-400">
+                <Search className="w-3.5 h-3.5" />
               </div>
-
               <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-mono font-extrabold text-white tracking-widest uppercase">
-                    {firstName}'s Neural Command Center
-                  </h3>
-                  <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-cyan-950/80 text-cyan-300 border border-cyan-500/40">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    TELEMETRY SYNCHRONIZED
-                  </span>
-                </div>
-                <p className="text-[10px] font-mono text-cyan-400/80 hidden sm:block">
-                  FULL-SCREEN VISUAL SEARCH ENGINE // REAL-TIME COMPONENT SYNTHESIS
-                </p>
+                <h3 className="text-sm font-mono font-bold text-white tracking-wider">
+                  {agentName}
+                </h3>
               </div>
             </div>
 
-            {/* Right: Controls & Dismissal */}
             <div className="flex items-center gap-2">
+              {messages.length > 0 && (
+                <button
+                  onClick={() => {
+                    setMessages([]);
+                    playHudSound('chirp');
+                  }}
+                  className="px-2.5 py-1 rounded-lg text-xs font-mono text-slate-400 hover:text-cyan-300 bg-slate-900/60 hover:bg-slate-900 border border-slate-800 transition-colors cursor-pointer flex items-center gap-1.5"
+                  title="New Search / Clear"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">New Search</span>
+                </button>
+              )}
+
               <button
                 onClick={() => setIsFullScreen(!isFullScreen)}
                 aria-label={isFullScreen ? 'Dock Window' : 'Full Screen'}
-                className="p-2 rounded-xl text-slate-400 hover:text-cyan-300 bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-cyan-500/40 transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-300 bg-slate-900/60 hover:bg-slate-900 border border-slate-800 transition-colors cursor-pointer"
                 title={isFullScreen ? 'Dock Window' : 'Maximize Full Screen'}
               >
                 {isFullScreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -2146,238 +1606,238 @@ Enter any inquiry or select a deep-dive visual dossier below:`,
                   setIsOpen(false);
                   playHudSound('close');
                 }}
-                aria-label="Close Command Center"
-                className="p-2 rounded-xl text-slate-400 hover:text-white bg-slate-900/60 hover:bg-rose-950/80 border border-slate-800 hover:border-rose-500/50 transition-colors cursor-pointer group"
+                aria-label="Close"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-900/60 hover:bg-rose-950/80 border border-slate-800 hover:border-rose-500/50 transition-colors cursor-pointer"
                 title="Close (Esc)"
               >
-                <X className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                <X className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* Center-Stage Holographic Omnibar */}
-          <div className="px-4 sm:px-6 py-4 bg-[#050811]/90 border-b border-cyan-500/20 shrink-0 relative z-10">
-            <div className="max-w-4xl mx-auto space-y-3">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSend();
-                }}
-                className="relative flex items-center"
-              >
-                <div className="absolute left-4 flex items-center gap-2 text-cyan-400 pointer-events-none">
-                  <Terminal className="w-4 h-4" />
-                  <span className="text-xs font-mono font-bold text-cyan-400">λ &gt;</span>
+          {/* ---------------------------------------------------- */}
+          {/* INITIAL STATE: Clean Search Bar + Suggestions        */}
+          {/* (NO charts, NO radar, NO boxes initially)            */}
+          {/* ---------------------------------------------------- */}
+          {messages.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 max-w-3xl mx-auto w-full animate-fadeIn">
+              <div className="w-full space-y-6 text-center">
+                <div className="space-y-2">
+                  <div className="inline-flex p-3 rounded-2xl bg-cyan-950/60 border border-cyan-500/40 text-cyan-400 mb-2 shadow-[0_0_25px_rgba(6,182,212,0.25)]">
+                    <Sparkles className="w-6 h-6 animate-pulse" />
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold text-white font-mono tracking-tight">
+                    {agentName}
+                  </h2>
+                  <p className="text-sm text-slate-400 font-sans max-w-lg mx-auto">
+                    Ask anything about {firstName}'s engineering background, production projects, skills, or system architecture.
+                  </p>
                 </div>
 
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder={`Search anything about ${firstName}: "Show GenAI pipeline", "Postgres query tuning", "Radar skills", "Deloitte experience"...`}
-                  className="w-full pl-16 pr-28 py-3.5 text-sm sm:text-base font-mono rounded-2xl bg-slate-950/90 border border-cyan-500/40 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 shadow-[0_0_25px_rgba(6,182,212,0.15)] transition-all"
-                />
+                {/* Big Initial Search Input */}
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSend();
+                  }}
+                  className="relative flex items-center max-w-2xl mx-auto"
+                >
+                  <div className="absolute left-4 flex items-center text-cyan-400 pointer-events-none">
+                    <Search className="w-5 h-5" />
+                  </div>
 
-                <div className="absolute right-3 flex items-center gap-1.5">
-                  {/* Voice Input Button */}
-                  <button
-                    type="button"
-                    onClick={toggleVoiceInput}
-                    aria-label={isListening ? 'Stop Listening' : 'Voice Input'}
-                    className={`p-2 rounded-xl transition-all cursor-pointer ${
-                      isListening
-                        ? 'bg-rose-500 text-white animate-pulse shadow-[0_0_15px_#f43f5e]'
-                        : 'text-slate-400 hover:text-cyan-300 hover:bg-slate-900 border border-transparent hover:border-cyan-500/30'
-                    }`}
-                    title={isListening ? 'Listening...' : 'Voice Search'}
-                  >
-                    {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                  </button>
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder={`Ask a question about ${firstName}...`}
+                    className="w-full pl-12 pr-28 py-4 text-base font-sans rounded-2xl bg-slate-950/90 border border-cyan-500/40 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 shadow-[0_0_30px_rgba(6,182,212,0.2)] transition-all"
+                  />
 
-                  {/* Send Button */}
-                  <button
-                    type="submit"
-                    disabled={!input.trim() || loading}
-                    aria-label="Send Query"
-                    className="p-2 sm:px-3 sm:py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-mono font-bold text-xs disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-[0_0_15px_rgba(6,182,212,0.4)] cursor-pointer flex items-center gap-1.5"
-                  >
-                    <Send className="w-4 h-4" />
-                    <span className="hidden sm:inline">QUERY</span>
-                  </button>
+                  <div className="absolute right-3 flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={toggleVoiceInput}
+                      aria-label="Voice Input"
+                      className={`p-2 rounded-xl transition-all cursor-pointer ${
+                        isListening
+                          ? 'bg-rose-500 text-white animate-pulse'
+                          : 'text-slate-400 hover:text-cyan-300 hover:bg-slate-900'
+                      }`}
+                    >
+                      {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={!input.trim() || loading}
+                      aria-label="Search"
+                      className="px-3.5 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-mono font-bold text-xs disabled:opacity-40 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>SEARCH</span>
+                    </button>
+                  </div>
+                </form>
+
+                {/* Initial Quick Suggestion Pills */}
+                <div className="pt-4 max-w-2xl mx-auto">
+                  <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block mb-3">
+                    SUGGESTED EXPLORATION PATHS:
+                  </span>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {initialSuggestions.map((item, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleSend(item.query)}
+                        className="group px-3.5 py-2 rounded-xl text-xs font-mono bg-slate-950/80 hover:bg-cyan-950/60 border border-slate-800 hover:border-cyan-500/50 text-slate-300 hover:text-cyan-200 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] flex items-center gap-1.5"
+                      >
+                        <span className="text-cyan-400 group-hover:translate-x-0.5 transition-transform text-[11px]">▹</span>
+                        <span>{item.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </form>
-
-              {/* Fast Visual Story Preset Filters */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs font-mono">
-                <span className="text-[10px] text-cyan-400/80 uppercase tracking-widest shrink-0">
-                  STORY TELEMETRY:
-                </span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleSend(
-                      `Show me ${firstName}'s GenAI, LiteLLM and Grounded Architecture work`,
-                      'omni',
-                      'genai'
-                    )
-                  }
-                  className="px-2.5 py-1 rounded-lg bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/30 text-cyan-300 shrink-0 transition-colors cursor-pointer"
-                >
-                  ⚡ GenAI & Grounding
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleSend(
-                      `Explain ${firstName}'s API and Postgres performance optimization patterns`,
-                      'omni',
-                      'performance'
-                    )
-                  }
-                  className="px-2.5 py-1 rounded-lg bg-amber-950/40 hover:bg-amber-900/60 border border-amber-500/30 text-amber-300 shrink-0 transition-colors cursor-pointer"
-                >
-                  🚀 Query Plans & Performance
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleSend(
-                      `Display ${firstName}'s competency radar and skills matrix`,
-                      'omni',
-                      'skills'
-                    )
-                  }
-                  className="px-2.5 py-1 rounded-lg bg-purple-950/40 hover:bg-purple-900/60 border border-purple-500/30 text-purple-300 shrink-0 transition-colors cursor-pointer"
-                >
-                  📊 Competency Radar Chart
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleSend(
-                      `What are ${firstName}'s featured production code projects?`,
-                      'omni',
-                      'projects'
-                    )
-                  }
-                  className="px-2.5 py-1 rounded-lg bg-blue-950/40 hover:bg-blue-900/60 border border-blue-500/30 text-blue-300 shrink-0 transition-colors cursor-pointer"
-                >
-                  🛠️ Projects & Code
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleSend(
-                      `Summarize ${firstName}'s enterprise career milestones`,
-                      'omni',
-                      'experience'
-                    )
-                  }
-                  className="px-2.5 py-1 rounded-lg bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-500/30 text-emerald-300 shrink-0 transition-colors cursor-pointer"
-                >
-                  🏛️ Enterprise Milestones
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleSend(
-                      `List ${firstName}'s technical blog publications`,
-                      'omni',
-                      'blog'
-                    )
-                  }
-                  className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 shrink-0 transition-colors cursor-pointer"
-                >
-                  📖 Publications & Blueprints
-                </button>
               </div>
             </div>
-          </div>
-
-          {/* Dossier & Story Results Viewport */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 max-w-5xl mx-auto w-full">
-            {messages.map((msg, index) => {
-              const isUser = msg.sender === 'user';
-
-              if (isUser) {
-                return (
-                  <div key={index} className="flex justify-end animate-fadeIn">
-                    <div className="max-w-2xl px-4 py-2.5 rounded-2xl rounded-tr-none bg-cyan-950/60 border border-cyan-500/40 text-cyan-100 text-sm font-mono shadow-[0_0_20px_rgba(6,182,212,0.15)] flex items-center gap-2">
-                      <Terminal className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                      <span>{msg.text}</span>
-                    </div>
-                  </div>
-                );
-              }
-
-              return (
-                <div
-                  key={index}
-                  className="p-5 sm:p-7 rounded-2xl bg-[#060a17]/90 border border-cyan-500/30 shadow-[0_0_35px_rgba(6,182,212,0.15)] space-y-5 animate-fadeIn"
+          ) : (
+            /* ---------------------------------------------------- */
+            /* CONVERSATION VIEWPORT: Active Search + Results       */
+            /* ---------------------------------------------------- */
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* Pinned Top Search Bar */}
+              <div className="px-4 sm:px-6 py-3 bg-[#050811]/90 border-b border-cyan-500/20 shrink-0">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSend();
+                  }}
+                  className="relative flex items-center max-w-4xl mx-auto"
                 >
-                  {/* Executive AI Header & Audio Equalizer */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-cyan-500/20 pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-                      <span className="text-xs font-mono font-extrabold text-cyan-300 uppercase tracking-widest">
-                        INTELLIGENCE DOSSIER // {msg.storyType?.toUpperCase() || 'SYNTHESIS'}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {/* Neural Voice Waveform & Listen Button */}
-                      <NeuralVoiceWave
-                        isSpeaking={isSpeaking}
-                        isListening={isListening}
-                        hasText={Boolean(msg.text)}
-                        onToggleSpeech={() => toggleSpeechSynthesis(msg.text)}
-                      />
-
-                      {/* Copy Dossier */}
-                      <button
-                        onClick={() => copyToClipboard(msg.text, index)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-900 border border-slate-800 transition-colors cursor-pointer"
-                        title="Copy Dossier Text"
-                      >
-                        {copiedIndex === index ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        ) : (
-                          <Copy className="w-3.5 h-3.5" />
-                        )}
-                      </button>
-                    </div>
+                  <div className="absolute left-4 flex items-center text-cyan-400 pointer-events-none">
+                    <Search className="w-4 h-4" />
                   </div>
 
-                  {/* AI Agent Narrative Briefing */}
-                  <div className="text-sm text-slate-200 leading-relaxed font-sans whitespace-pre-line">
-                    {msg.text.replace(/\[NAV:[a-zA-Z0-9_-]+\]/g, '').trim()}
-                  </div>
-
-                  {/* Render Rich Visual Story, Real Charts, Graphs & Interactive Components */}
-                  {renderVisualStory(msg.storyType, msg.text)}
-
-                  {/* Contextual Follow-Up Suggestions */}
-                  <FollowUpSuggestions
-                    suggestions={getFollowUpSuggestions(msg.storyType, msg.text, firstName)}
-                    onSelect={(query) => handleSend(query)}
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder={`Ask another question about ${firstName}...`}
+                    className="w-full pl-11 pr-24 py-2.5 text-sm font-sans rounded-xl bg-slate-950/90 border border-cyan-500/30 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/30 transition-all"
                   />
-                </div>
-              );
-            })}
 
-            {loading && (
-              <div className="p-6 rounded-2xl bg-[#070c1b]/80 border border-cyan-500/30 flex items-center gap-3 text-cyan-400 font-mono text-xs animate-pulse">
-                <Loader2 className="w-5 h-5 animate-spin text-cyan-400" />
-                <span>SYNTHESIZING VISUAL DOSSIER // ACCESSING SYSTEM TELEMETRY...</span>
+                  <div className="absolute right-2 flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={toggleVoiceInput}
+                      className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                        isListening ? 'bg-rose-500 text-white animate-pulse' : 'text-slate-400 hover:text-cyan-300'
+                      }`}
+                    >
+                      {isListening ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!input.trim() || loading}
+                      className="px-2.5 py-1.5 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-mono font-bold text-xs disabled:opacity-40 cursor-pointer flex items-center gap-1"
+                    >
+                      <Send className="w-3 h-3" />
+                      <span>ASK</span>
+                    </button>
+                  </div>
+                </form>
               </div>
-            )}
 
-            <div ref={messagesEndRef} />
-          </div>
+              {/* Messages & Results List */}
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 max-w-4xl mx-auto w-full">
+                {messages.map((msg, index) => {
+                  const isUser = msg.sender === 'user';
+
+                  if (isUser) {
+                    return (
+                      <div key={index} className="flex justify-end animate-fadeIn">
+                        <div className="max-w-2xl px-4 py-2.5 rounded-2xl rounded-tr-none bg-cyan-950/50 border border-cyan-500/40 text-cyan-100 text-sm font-mono shadow-[0_0_15px_rgba(6,182,212,0.1)] flex items-center gap-2">
+                          <Terminal className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                          <span>{msg.text}</span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={index}
+                      className="p-5 sm:p-6 rounded-2xl bg-[#060a17]/90 border border-cyan-500/25 shadow-lg space-y-4 animate-fadeIn"
+                    >
+                      {/* Response Header */}
+                      <div className="flex items-center justify-between border-b border-cyan-500/20 pb-2.5">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                          <span className="text-xs font-mono font-bold text-white tracking-wider">
+                            {agentName}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {/* Text-To-Speech Button */}
+                          <button
+                            onClick={() => toggleSpeechSynthesis(msg.text)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-300 bg-slate-900 border border-slate-800 transition-colors cursor-pointer"
+                            title={isSpeaking ? 'Mute' : 'Listen'}
+                          >
+                            {isSpeaking ? (
+                              <VolumeX className="w-3.5 h-3.5 text-rose-400" />
+                            ) : (
+                              <Volume2 className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+
+                          {/* Copy Button */}
+                          <button
+                            onClick={() => copyToClipboard(msg.text, index)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-900 border border-slate-800 transition-colors cursor-pointer"
+                            title="Copy response"
+                          >
+                            {copiedIndex === index ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Main Formatted Content (Text, Tables, Markdown) */}
+                      <FormattedContent text={msg.text} />
+
+                      {/* On-Demand Visual Component (Charts, Boxes, Graphs ONLY if query called for it) */}
+                      {renderVisualComponentOnDemand(msg.componentType)}
+
+                      {/* Dynamic Contextual Follow-Up Suggestions */}
+                      <FollowUpSuggestions
+                        suggestions={getFollowUpSuggestions(msg.componentType, msg.text, firstName)}
+                        onSelect={(query) => handleSend(query)}
+                      />
+                    </div>
+                  );
+                })}
+
+                {loading && (
+                  <div className="p-4 rounded-xl bg-slate-950/70 border border-cyan-500/30 flex items-center gap-2.5 text-cyan-400 font-mono text-xs animate-pulse">
+                    <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+                    <span>Searching {firstName}'s knowledge base & synthesizing response...</span>
+                  </div>
+                )}
+
+                <div ref={messagesEndRef} />
+              </div>
+            </div>
+          )}
 
           {/* ---------------------------------------------------- */}
-          {/* In-Place Technical Article Reader Drawer             */}
+          {/* In-Place Article Reader Drawer                       */}
           {/* ---------------------------------------------------- */}
           {selectedArticle && (
             <div className="absolute inset-0 z-50 bg-[#050811]/98 backdrop-blur-3xl p-6 sm:p-10 overflow-y-auto flex flex-col justify-between animate-fadeIn">
@@ -2385,7 +1845,7 @@ Enter any inquiry or select a deep-dive visual dossier below:`,
                 <div className="flex items-center justify-between pb-4 border-b border-cyan-500/30 mb-6">
                   <div>
                     <span className="text-xs font-mono text-cyan-400 uppercase tracking-widest">
-                      TECHNICAL PUBLICATION SCHEMATICS
+                      TECHNICAL PUBLICATION
                     </span>
                     <h2 className="text-xl sm:text-2xl font-bold text-white mt-1">{selectedArticle.title}</h2>
                     {selectedArticle.tags && (
